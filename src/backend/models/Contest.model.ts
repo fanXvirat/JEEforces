@@ -27,7 +27,6 @@ export interface Contest extends Document{
     problems:mongoose.Schema.Types.ObjectId[];
     participants:mongoose.Schema.Types.ObjectId[];
     leaderboard:Leaderboard[];
-    createdby:mongoose.Schema.Types.ObjectId;
     ispublished:boolean;
 }
 const ContestSchema: Schema<Contest> = new Schema({
@@ -51,22 +50,17 @@ const ContestSchema: Schema<Contest> = new Schema({
     problems:[{
         type:mongoose.Schema.Types.ObjectId,
         ref:"Problem",
-        required:true
+        required:false
     }],
     participants:[{
         type:mongoose.Schema.Types.ObjectId,
         ref:"User",
     }],
     leaderboard:[LeaderboardSchema],
-    createdby:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"User",
-        required:true
-    },
     ispublished:{
         type:Boolean,
         required:true
     }
 });
-const ContestModel = (mongoose.models.User as mongoose.Model<Contest>) || mongoose.model<Contest>("Contest",ContestSchema);
+const ContestModel = (mongoose.models.Contest as mongoose.Model<Contest>) || mongoose.model<Contest>("Contest",ContestSchema);
 export default ContestModel;
