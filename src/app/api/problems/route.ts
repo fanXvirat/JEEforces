@@ -37,54 +37,25 @@ export async function POST(request: Request) {
 }
 export async function GET(request: Request) {
     await dbConnect();
-
-    const session = await getServerSession(authOptions);
-    const user: User = session?.user;
-
-    if (!session || !user) {
-        return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+  
     try {
-        const url = new URL(request.url);
-        const problemId = url.searchParams.get("id");
-
-        if (problemId) {
-            // Fetch a specific problem by ID
-            const problem = await ProblemModel.aggregate([
-                { $match: { _id: new mongoose.Types.ObjectId(problemId) } },
-                {
-                    $lookup: {
-                        from: "users",
-                        localField: "author",
-                        foreignField: "_id",
-                        as: "author",
-                    },
-                },
-                {
-                    $addFields: {
-                        author: { $arrayElemAt: ["$author", 0] }, // Extract author object
-                    },
-                },
-                {
-                    $project: {
-                        "author.password": 0, // Exclude sensitive user data
-                    },
-                },
-            ]);
-
-            if (!problem || problem.length === 0) {
-                return Response.json({ error: "Problem not found" }, { status: 404 });
-            }
-
-            return Response.json(problem[0]);
-        } else {
-            // Fetch all problems
-            const problems = await ProblemModel.find({}, "_id title difficulty score tags subject");
-            return Response.json(problems);
-        }
+      const { searchParams } = new URL(request.url);
+      const query: any = {};
+      
+      // Add filters if needed
+      const difficulty = searchParams.get('difficulty');
+      const subject = searchParams.get('subject');
+      
+      if (difficulty) query.difficulty = parseInt(difficulty);
+      if (subject) query.subject = subject;
+  
+      // Fetch problems with the required fields only
+      const problems = await ProblemModel.find(query, "_id title difficulty score tags subject")
+        .sort({ createdAt: -1 }); // Newest first
+  
+      return Response.json(problems); // Return direct array
     } catch (error) {
-        console.error("Error fetching problems:", error);
-        return Response.json({ error: "Internal Server Error" }, { status: 500 });
+      console.error("Error fetching problems:", error);
+      return Response.json([], { status: 500 }); // Return empty array on error
     }
-}
+  }
