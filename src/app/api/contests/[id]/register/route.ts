@@ -4,15 +4,18 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options"; 
 import { User } from "next-auth";
 
-export async function POST(request: Request,{ params }: { params: { id: string } }){
+
+import UserModel from "@/backend/models/User.model";
+export async function POST(request: Request) { // Remove params from function parameters
     await dbConnect();
-    const session = await getServerSession(authOptions)
-    const user: User=session?.user;
-    if(!session || !user){
-        return Response.json({error:"Unauthorized"},{status:401});
+    const session = await getServerSession(authOptions);
+    const user: User = session?.user;
+    if (!session || !user) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const userId=session.user._id;
-    const contestId=params.id;
+    const userId = session.user._id;
+    const url = new URL(request.url);
+    const contestId = url.pathname.split('/')[4];
     try {
         const contest = await ContestModel.findById(contestId);
         if (!contest) {
@@ -26,6 +29,9 @@ export async function POST(request: Request,{ params }: { params: { id: string }
 
         // Register the user
         contest.participants.push(userId);
+        await UserModel.findByIdAndUpdate(user._id, {
+            $push: { contestsParticipated: contestId }
+        });
         await contest.save();
 
         return Response.json({ message: "Registered successfully" });
