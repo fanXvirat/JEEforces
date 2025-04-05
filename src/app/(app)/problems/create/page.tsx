@@ -33,7 +33,7 @@ export default function ProblemFormPage() {
     tags: [] as string[],
     subject: 'Physics',
     options: ['', '', '', ''],
-    correctOption: 0,
+    correctOption: '',
     solution: '',
   });
   const [newTag, setNewTag] = useState('');
@@ -52,7 +52,7 @@ export default function ProblemFormPage() {
             tags: data.tags || [],
             subject: data.subject,
             options: data.options,
-            correctOption: parseInt(data.correctOption),
+            correctOption: data.correctOption,
             solution: data.solution || '',
           });
         } catch (error) {
@@ -235,8 +235,8 @@ export default function ProblemFormPage() {
               <input
                 type="radio"
                 name="correctOption"
-                checked={formData.correctOption === index}
-                onChange={() => setFormData({...formData, correctOption: index})}
+                checked={formData.correctOption === option}
+                onChange={() => setFormData({...formData, correctOption: option})}
                 className="h-4 w-4"
               />
               <Input

@@ -118,7 +118,7 @@ export default function ProblemDetailPage() {
             <h3 className="font-medium mb-2">Solution</h3>
             <div dangerouslySetInnerHTML={{ __html: problem.solution }} />
             <p className="mt-2 text-sm text-gray-600">
-              Correct Answer: {String.fromCharCode(65 + parseInt(problem.correctOption))}
+              {problem.correctOption}
             </p>
           </div>
         )}

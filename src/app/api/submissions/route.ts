@@ -12,12 +12,19 @@ export async function GET(request: Request) {
     }
 
     try {
-        const userId = session.user._id; // Get logged-in user ID
+        const userId = session.user._id;
+        const { searchParams } = new URL(request.url);
+        const contestId = searchParams.get('contestId');
 
-        const submissions = await SubmissionModel.find({ user: userId })
-            .populate("problem", "title") // Fetch problem titles
-            .populate("contest", "name")  // Fetch contest names
-            .sort({ submissionTime: -1 }); // Sort by latest submissions
+        // Build query with contest filter if provided
+        const query: Record<string, any> = { user: userId };
+        if (contestId) query.contest = contestId;
+        if (searchParams.get('isFinal')) query.isFinal = true;
+
+        const submissions = await SubmissionModel.find(query)
+            .populate("problem", "title")
+            .populate("contest", "name")
+            .sort({ submissionTime: -1 });
 
         return Response.json(submissions, { status: 200 });
 

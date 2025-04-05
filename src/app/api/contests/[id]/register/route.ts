@@ -15,7 +15,7 @@ export async function POST(request: Request) { // Remove params from function pa
     }
     const userId = session.user._id;
     const url = new URL(request.url);
-    const contestId = url.pathname.split('/')[4];
+    const contestId = url.pathname.split('/')[3];
     try {
         const contest = await ContestModel.findById(contestId);
         if (!contest) {

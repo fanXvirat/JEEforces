@@ -32,7 +32,7 @@ const CreateContestPage = () => {
     title: '',
     description: '',
     startTime: new Date(),
-    endTime: new Date(),
+    endTime: new Date(new Date().getTime() + 60 * 60 * 1000), // Default to 1 hour from now
     problems: [] as string[],
   });
 
@@ -40,6 +40,10 @@ const CreateContestPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [startTimeOpen, setStartTimeOpen] = useState(false);
   const [endTimeOpen, setEndTimeOpen] = useState(false);
+  const [startHour, setStartHour] = useState('00');
+  const [startMinute, setStartMinute] = useState('00');
+  const [endHour, setEndHour] = useState('01');
+  const [endMinute, setEndMinute] = useState('00');
 
   useEffect(() => {
     const fetchProblems = async () => {
@@ -52,6 +56,22 @@ const CreateContestPage = () => {
     };
     fetchProblems();
   }, []);
+
+  useEffect(() => {
+    // Update the full datetime when hour or minute changes
+    const updateTime = (field: 'startTime' | 'endTime', hours: string, minutes: string) => {
+      const hoursNum = parseInt(hours, 10) || 0;
+      const minutesNum = parseInt(minutes, 10) || 0;
+      
+      setFormData(prev => ({
+        ...prev,
+        [field]: setHours(setMinutes(new Date(prev[field]), minutesNum), hoursNum),
+      }));
+    };
+
+    updateTime('startTime', startHour, startMinute);
+    updateTime('endTime', endHour, endMinute);
+  }, [startHour, startMinute, endHour, endMinute]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,13 +91,18 @@ const CreateContestPage = () => {
       return;
     }
 
+    if (formData.problems.length === 0) {
+      toast.error('Please select at least one problem');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const contestData = {
         title: formData.title,
         description: formData.description,
-        startTime: new Date(formData.startTime).toISOString(),
-        endTime: new Date(formData.endTime).toISOString(),
+        startTime: formData.startTime.toISOString(),
+        endTime: formData.endTime.toISOString(),
         problems: formData.problems,
       };
 
@@ -97,7 +122,7 @@ const CreateContestPage = () => {
     }
   };
 
-  const handleTimeChange = (date: Date | undefined, field: 'startTime' | 'endTime') => {
+  const handleDateChange = (date: Date | undefined, field: 'startTime' | 'endTime') => {
     if (!date) return;
     setFormData(prev => ({
       ...prev,
@@ -143,47 +168,115 @@ const CreateContestPage = () => {
               {/* Start Time */}
               <div>
                 <label className="block text-sm font-medium">Start Time</label>
-                <Popover open={startTimeOpen} onOpenChange={setStartTimeOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => setStartTimeOpen(true)}
+                <div className="flex gap-2">
+                  <Popover open={startTimeOpen} onOpenChange={setStartTimeOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                      >
+                        {format(formData.startTime, 'PPP')}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <Calendar
+                        mode="single"
+                        selected={formData.startTime}
+                        onSelect={(date) => handleDateChange(date, 'startTime')}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <div className="flex gap-1">
+                    <Select
+                      value={startHour.padStart(2, '0')}
+                      onValueChange={(value) => setStartHour(value)}
                     >
-                      {format(formData.startTime, 'PPPp')}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent>
-                    <Calendar
-                      mode="single"
-                      selected={formData.startTime}
-                      onSelect={(date) => handleTimeChange(date, 'startTime')}
-                    />
-                  </PopoverContent>
-                </Popover>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <SelectItem key={i} value={i.toString().padStart(2, '0')}>
+                            {i.toString().padStart(2, '0')}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span>:</span>
+                    <Select
+                      value={startMinute.padStart(2, '0')}
+                      onValueChange={(value) => setStartMinute(value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 60 }, (_, i) => (
+                          <SelectItem key={i} value={i.toString().padStart(2, '0')}>
+                            {i.toString().padStart(2, '0')}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
 
               {/* End Time */}
               <div>
                 <label className="block text-sm font-medium">End Time</label>
-                <Popover open={endTimeOpen} onOpenChange={setEndTimeOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => setEndTimeOpen(true)}
+                <div className="flex gap-2">
+                  <Popover open={endTimeOpen} onOpenChange={setEndTimeOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                      >
+                        {format(formData.endTime, 'PPP')}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <Calendar
+                        mode="single"
+                        selected={formData.endTime}
+                        onSelect={(date) => handleDateChange(date, 'endTime')}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <div className="flex gap-1">
+                    <Select
+                      value={endHour.padStart(2, '0')}
+                      onValueChange={(value) => setEndHour(value)}
                     >
-                      {format(formData.endTime, 'PPPp')}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent>
-                    <Calendar
-                      mode="single"
-                      selected={formData.endTime}
-                      onSelect={(date) => handleTimeChange(date, 'endTime')}
-                    />
-                  </PopoverContent>
-                </Popover>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <SelectItem key={i} value={i.toString().padStart(2, '0')}>
+                            {i.toString().padStart(2, '0')}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span>:</span>
+                    <Select
+                      value={endMinute.padStart(2, '0')}
+                      onValueChange={(value) => setEndMinute(value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 60 }, (_, i) => (
+                          <SelectItem key={i} value={i.toString().padStart(2, '0')}>
+                            {i.toString().padStart(2, '0')}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
             </div>
 
