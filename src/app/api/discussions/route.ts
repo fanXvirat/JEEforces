@@ -39,9 +39,33 @@ export async function GET() {
     await dbConnect();
 
     try {
-        const discussions = await DiscussionModel.find()
-            .populate("author", "name") // Fetch author details
-            .sort({ CreatedAt: -1 });
+        const discussions = await DiscussionModel.aggregate([
+            {
+                $lookup: {
+                    from: "users", // The collection name in MongoDB (usually lowercase plural)
+                    localField: "author",
+                    foreignField: "_id",
+                    as: "author"
+                }
+            },
+            { $unwind: "$author" }, // Convert the author array to an object
+            {
+                $project: {
+                    title: 1,
+                    content: 1,
+                    upvotes: 1,
+                    downvotes: 1,
+                    comments: 1,
+                    report: 1,
+                    CreatedAt: 1,
+                    "author._id": 1,
+                    "author.username": 1,
+                    "author.name": 1,
+                    "author.email": 1
+                }
+            },
+            { $sort: { CreatedAt: -1 } }
+        ]);
 
         return Response.json({ discussions }, { status: 200 });
     } catch (error) {

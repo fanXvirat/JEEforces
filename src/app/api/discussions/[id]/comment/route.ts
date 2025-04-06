@@ -1,10 +1,9 @@
 import dbConnect from "@/lib/dbConnect";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
-import {DiscussionModel,CommentModel} from "@/backend/models/Discussion.model";
+import { DiscussionModel, CommentModel } from "@/backend/models/Discussion.model";
 
-
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request) {
     await dbConnect();
     const session = await getServerSession(authOptions);
 
@@ -13,12 +12,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
 
     try {
+        const url = new URL(request.url);
+        const id = url.pathname.split('/').slice(-2, -1)[0]; // Extract the `id` from the URL
+
         const { text } = await request.json();
         if (!text) {
             return Response.json({ error: "Comment text is required" }, { status: 400 });
         }
 
-        const discussion = await DiscussionModel.findById(params.id);
+        const discussion = await DiscussionModel.findById(id);
         if (!discussion) {
             return Response.json({ error: "Discussion not found" }, { status: 404 });
         }

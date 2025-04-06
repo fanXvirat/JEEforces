@@ -26,6 +26,8 @@ export interface Comment extends Document {
     text: string;
     author: mongoose.Schema.Types.ObjectId;
     CreatedAt: Date;
+    upvotes: mongoose.Schema.Types.ObjectId[];
+    downvotes: mongoose.Schema.Types.ObjectId[];
     replies: Replies[];
 }
 const CommentSchema: Schema<Comment> = new Schema({
@@ -42,6 +44,16 @@ const CommentSchema: Schema<Comment> = new Schema({
         type: Date,
         required: true
     },
+    upvotes: [{
+        type: mongoose.Schema.Types.ObjectId, // ✅ Fixed type
+        ref: "User",
+        default: []
+    }],
+    downvotes: [{
+        type: mongoose.Schema.Types.ObjectId, // ✅ Fixed type
+        ref: "User",
+        default: []
+    }],
     replies: [RepliesSchema] // Embedded Replies
 });
 
@@ -72,14 +84,12 @@ const DiscussionSchema: Schema<Discussion> = new Schema({
     upvotes: [{
         type: mongoose.Schema.Types.ObjectId, // ✅ Fixed type
         ref: "User",
-        default: [],
-        unique:true
+        default: []
     }],
     downvotes: [{
         type: mongoose.Schema.Types.ObjectId, // ✅ Fixed type
         ref: "User",
-        default: [],
-        unique:true
+        default: []
     }],
     comments: [CommentSchema], // Embedded Comments
     report: [{
