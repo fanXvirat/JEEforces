@@ -2,6 +2,7 @@ import dbConnect from "@/lib/dbConnect";
 import {DiscussionModel} from "@/backend/models/Discussion.model";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
+import { PipelineStage } from "mongoose";
 
 export async function POST(request: Request) {
     await dbConnect();
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
             comments: [],
             report: [],
             CreatedAt: new Date(),
+            isFeatured: false,
         });
 
         return Response.json({ message: "Discussion created", discussion }, { status: 201 });
@@ -35,20 +37,25 @@ export async function POST(request: Request) {
     }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
     await dbConnect();
+    const { searchParams } = new URL(request.url);
+    const featured = searchParams.get('featured');
 
     try {
-        const discussions = await DiscussionModel.aggregate([
+        const pipeline: PipelineStage[] = [
             {
                 $lookup: {
-                    from: "users", // The collection name in MongoDB (usually lowercase plural)
+                    from: "users",
                     localField: "author",
                     foreignField: "_id",
                     as: "author"
                 }
             },
-            { $unwind: "$author" }, // Convert the author array to an object
+            { $unwind: "$author" },
+            {
+                $match: featured === 'true' ? { isFeatured: true } : {}
+            },
             {
                 $project: {
                     title: 1,
@@ -58,6 +65,7 @@ export async function GET() {
                     comments: 1,
                     report: 1,
                     CreatedAt: 1,
+                    isFeatured: 1,
                     "author._id": 1,
                     "author.username": 1,
                     "author.name": 1,
@@ -65,8 +73,9 @@ export async function GET() {
                 }
             },
             { $sort: { CreatedAt: -1 } }
-        ]);
+        ];
 
+        const discussions = await DiscussionModel.aggregate(pipeline);
         return Response.json({ discussions }, { status: 200 });
     } catch (error) {
         console.error("Fetch Discussions Error:", error);

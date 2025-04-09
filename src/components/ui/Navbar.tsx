@@ -35,8 +35,8 @@ function Navbar() {
                } md:flex space-x-6 absolute md:static bg-white md:bg-transparent w-full md:w-auto left-0 top-16 md:top-auto p-4 md:p-0 shadow-md md:shadow-none z-40`}
             >
                <li>
-                  <Link href='/' className='hover:text-blue-600'>
-                     Home
+                  <Link href='/dashboard' className='hover:text-blue-600'>
+                     Dashboard
                   </Link>
                </li>
                <li>

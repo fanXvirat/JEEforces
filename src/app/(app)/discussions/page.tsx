@@ -15,6 +15,8 @@ import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { VoteButtons } from '@/components/Upvote';
+import { toast } from 'sonner';
+import { Star} from 'lucide-react';
 
 interface Discussion {
   _id: string;
@@ -25,7 +27,9 @@ interface Discussion {
   downvotes: string[];
   comments: any[];
   CreatedAt: string;
+  isFeatured: boolean;
 }
+
 
 export default function DiscussionsPage() {
   const { data: session } = useSession();
@@ -54,6 +58,20 @@ export default function DiscussionsPage() {
       </div>
     );
   }
+  const toggleFeatured = async (discussionId: string) => {
+    try {
+      const response = await axios.put(`/api/discussions/${discussionId}/toggle-feature`);
+      setDiscussions(prev => 
+        prev.map(d => 
+          d._id === discussionId ? { ...d, isFeatured: response.data.discussion.isFeatured } : d
+        )
+      );
+      toast.success(`Discussion ${response.data.discussion.isFeatured ? 'pinned' : 'unpinned'}`);
+    } catch (error) {
+      toast.error('Failed to update feature status');
+      console.error('Toggle feature error:', error);
+    }
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -69,6 +87,25 @@ export default function DiscussionsPage() {
       <div className="space-y-4">
         {discussions.map((discussion) => (
           <Card key={discussion._id} className="hover:shadow-lg transition-shadow">
+            {session?.user?.role === 'admin' && (
+              <div className="relative top-2 right-2">
+                <Button
+                  size="sm"
+                  variant={discussion.isFeatured ? 'default' : 'outline'}
+                  onClick={() => toggleFeatured(discussion._id)}
+                  className="gap-1"
+                >
+                  {discussion.isFeatured ? (
+                    <>
+                      <Star className="h-4 w-4" />
+                      <span className="ml-1">Pinned</span>
+                    </>
+                  ) : (
+                    'Pin'
+                  )}
+                </Button>
+              </div>
+            )}
             <CardHeader>
               <CardTitle>{discussion.title}</CardTitle>
               <div className="flex items-center text-sm text-gray-500">

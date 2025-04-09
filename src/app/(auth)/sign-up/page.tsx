@@ -87,7 +87,7 @@ function page() {
                <h1 className='text-4xl font-extrabold tracking-tight lg:text-5xl mb-6'>
                   Join AMA
                </h1>
-               <p className='mb-4'>Sign up to start your anonymous adventure</p>
+               <p className='mb-4'>Sign up to start your JEEForces adventure</p>
             </div>
             <Form {...form}>
                <form

@@ -66,6 +66,7 @@ export interface Discussion extends Document {
     comments: Comment[];
     report: mongoose.Schema.Types.ObjectId[];
     CreatedAt: Date;
+    isFeatured: boolean;
 }
 const DiscussionSchema: Schema<Discussion> = new Schema({
     title: {
@@ -99,7 +100,11 @@ const DiscussionSchema: Schema<Discussion> = new Schema({
     CreatedAt: {
         type: Date,
         required: true
-    }
+    },
+    isFeatured: {
+        type: Boolean,
+        default: false
+      }
 });
 
 const RepliesModel = mongoose.models.Replies as mongoose.Model<Replies> || mongoose.model<Replies>("Replies", RepliesSchema);

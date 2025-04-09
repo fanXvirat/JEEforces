@@ -40,8 +40,6 @@ export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   const user: User = session?.user;
 
-  console.log("Session:", session); // Log session
-  console.log("User:", user); // Log user
 
   if (!session || !user) {
     console.error("Unauthorized: No session or user found");

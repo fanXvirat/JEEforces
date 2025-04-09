@@ -14,8 +14,6 @@ export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   const user: User = session?.user;
 
-  console.log("Session:", session); // Log session
-  console.log("User:", user); // Log user
 
   if (!session || !user) {
     console.error("Unauthorized: No session or user found");
@@ -26,7 +24,6 @@ export async function GET(request: Request) {
   let userId;
   try {
     userId = new mongoose.Types.ObjectId(user._id);
-    console.log("User ID:", userId); // Log user ID
   } catch (error) {
     console.error("Invalid user ID:", error);
     return Response.json({ error: "Invalid user ID" }, { status: 400 });
@@ -67,8 +64,6 @@ export async function GET(request: Request) {
         },
       },
     ]);
-
-    console.log("User Data:", userData); // Log user data
 
     if (!userData || userData.length === 0) {
       console.error("User not found");
