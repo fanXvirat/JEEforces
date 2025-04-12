@@ -5,6 +5,8 @@ export interface Replies extends Document {
     text: string;
     author: mongoose.Schema.Types.ObjectId;
     CreatedAt: Date;
+    upvotes: mongoose.Schema.Types.ObjectId[];
+    downvotes: mongoose.Schema.Types.ObjectId[];
 }
 const RepliesSchema: Schema<Replies> = new Schema({
     text: {
@@ -19,9 +21,18 @@ const RepliesSchema: Schema<Replies> = new Schema({
     CreatedAt: {
         type: Date,
         required: true
-    }
+    },
+    upvotes: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: []
+    }],
+    downvotes: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: []
+    }]
 });
-
 export interface Comment extends Document {
     text: string;
     author: mongoose.Schema.Types.ObjectId;

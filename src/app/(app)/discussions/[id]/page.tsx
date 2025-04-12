@@ -38,6 +38,8 @@ export default function DiscussionPage() {
   const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [commentText, setCommentText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [replyTexts, setReplyTexts] = useState<{ [key: string]: string }>({});
+  const isReply= false; // Assuming this is a discussion page, not a reply page
 
   useEffect(() => {
     const fetchDiscussion = async () => {
@@ -52,6 +54,19 @@ export default function DiscussionPage() {
     };
     fetchDiscussion();
   }, [id]);
+  const handleReplySubmit = async (commentId: string) => {
+    try {
+      const response = await axios.post(
+        `/api/discussions/${id}/comment/${commentId}/reply`,
+        { text: replyTexts[commentId] }
+      );
+      setDiscussion(response.data.discussion);
+      setReplyTexts(prev => ({ ...prev, [commentId]: '' }));
+      toast.success('Reply added');
+    } catch (error) {
+      toast.error('Failed to add reply');
+    }
+  };
 
   const handleVote = async (action: 'upvote' | 'downvote', commentId?: string) => {
     if (!session?.user?._id) {
@@ -63,8 +78,11 @@ export default function DiscussionPage() {
       let updatedDiscussion;
       if (commentId) {
         // Update comment vote
-        const response = await axios.put(`/api/discussions/${id}/comment/${commentId}`, { action });
-        updatedDiscussion = response.data.discussion;
+        const response = await axios.put(`/api/discussions/${id}/comment/${commentId}${isReply ? '/reply' : 'upvote'}`, { action });
+        setDiscussion(prev => ({
+          ...prev!,
+          comments: response.data.comments
+        }));
       } else {
         // Update discussion vote
         const response = await axios.put(`/api/discussions/${id}`, { action });
@@ -152,6 +170,45 @@ export default function DiscussionPage() {
               <p>{comment.text}</p>
               
               {/* Reply section would go here */}
+              <div className="ml-4 mt-4 space-y-2">
+                {(comment.replies ?? []).map((reply) => (
+                  <div key={reply._id} className="border-l-2 pl-4">
+                    <div className="flex justify-between items-start mb-1">
+                      <div className="flex items-center text-sm text-gray-500">
+                        <span>{reply.author.username}</span>
+                        <span className="mx-2">•</span>
+                        <span>{format(new Date(reply.CreatedAt), 'MMM dd, HH:mm')}</span>
+                      </div>
+                      <VoteButtonsComment
+                        upvotes={reply.upvotes}
+                        downvotes={reply.downvotes}
+                        commentId={reply._id}
+                        discussionId={discussion._id}
+                        isReply={true}
+                      />
+                    </div>
+                    <p>{reply.text}</p>
+                  </div>
+                ))}
+
+                {/* Reply Input */}
+                {session?.user && (
+                  <div className="mt-2">
+                    <Textarea
+                      value={replyTexts[comment._id] || ''}
+                      onChange={(e) => setReplyTexts(prev => ({
+                        ...prev,
+                        [comment._id]: e.target.value
+                      }))}
+                      placeholder="Write a reply..."
+                      className="mb-2"
+                    />
+                    <Button onClick={() => handleReplySubmit(comment._id)}>
+                      Post Reply
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>

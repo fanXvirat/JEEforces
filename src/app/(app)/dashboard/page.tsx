@@ -3,12 +3,13 @@ import { useSession } from 'next-auth/react';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import axios, { AxiosError } from 'axios';
-import { Loader2, RefreshCcw } from 'lucide-react';
+import { Loader2, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserType } from '@/types/User';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import Link from 'next/link';
 
 const Page = () => {
   const { data: session, status } = useSession();
@@ -43,6 +44,12 @@ const Page = () => {
   return (
     <div className="my-8 mx-4 md:mx-8 lg:mx-auto p-6 bg-white rounded w-full max-w-6xl">
       <h1 className="text-4xl font-bold mb-4">User Dashboard</h1>
+      <Link href="/dashboard/settings">
+          <Button variant="outline" size="icon">
+            <Settings className="h-4 w-4" />
+          </Button>
+        </Link>
+      
 
       {/* Profile Section */}
       <div className="flex items-center space-x-4 mb-4">
@@ -116,18 +123,6 @@ const Page = () => {
       </Card>
 
       <Separator />
-
-      {/* Refresh Button */}
-      <Button
-        className="mt-4"
-        variant="outline"
-        onClick={(e) => {
-          e.preventDefault();
-          fetchUserDetails();
-        }}
-      >
-        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
-      </Button>
     </div>
   );
 };

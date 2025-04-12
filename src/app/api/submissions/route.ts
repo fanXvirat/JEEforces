@@ -19,7 +19,7 @@ export async function GET(request: Request) {
         // Build query with contest filter if provided
         const query: Record<string, any> = { user: userId };
         if (contestId) query.contest = contestId;
-        if (searchParams.get('isFinal')) query.isFinal = true;
+        if (searchParams.get('IsFinal')) query.IsFinal = true;
 
         const submissions = await SubmissionModel.find(query)
             .populate("problem", "title")

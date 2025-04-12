@@ -7,6 +7,7 @@ export interface Submission extends Document{
     submissionTime:Date;
     verdict:string;
     score:number;
+    IsFinal:boolean;
 }
 const SubmissionSchema: Schema<Submission> = new Schema({
     user:{
@@ -37,6 +38,10 @@ const SubmissionSchema: Schema<Submission> = new Schema({
     },
     score:{
         type:Number,
+        required:true
+    },
+    IsFinal:{
+        type:Boolean,
         required:true
     }
 });

@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     const existingFinal = await SubmissionModel.findOne({
       user: userId,
       contest: contestId,
-      isFinal: true
+      IsFinal: true
     });
 
     if (existingFinal) {
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
           submissionTime,
           verdict: isCorrect ? "Accepted" : "Wrong Answer",
           score: isCorrect ? problem?.score || 0 : 0,
-          isFinal: true // Mark as final submission
+          IsFinal: true // Mark as final submission
         },
         { upsert: true, new: true }
       );

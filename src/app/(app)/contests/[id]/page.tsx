@@ -55,7 +55,7 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
             try {
                 const [contestRes, submissionsRes] = await Promise.all([
                     axios.get(`/api/contests/${unwrappedParams.id}`),
-                    axios.get(`/api/submissions?contestId=${unwrappedParams.id}&isFinal=true`) // Only fetch final submissions
+                    axios.get(`/api/submissions?contestId=${unwrappedParams.id}&IsFinal=true`) // Only fetch final submissions
                 ]);
 
                 setContest(contestRes.data);

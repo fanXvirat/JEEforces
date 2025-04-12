@@ -11,11 +11,13 @@ export function VoteButtonsComment({
   downvotes,
   discussionId,
   commentId,
+  isReply = false,
 }: {
   upvotes: string[];
   downvotes: string[];
   discussionId: string;
   commentId: string;
+  isReply?: boolean;
 }) {
   const { data: session } = useSession();
   const userId = session?.user?._id;
@@ -47,8 +49,14 @@ export function VoteButtonsComment({
         );
         setOptimisticUpvotes(prev => prev.filter(id => id !== userId));
       }
-
-      await axios.put(`/api/discussions/${discussionId}/comment/${commentId}/upvote`, { action });
+      const endpoint = isReply 
+        ? `/api/discussions/${discussionId}/comment/${commentId}/reply`
+        : `/api/discussions/${discussionId}/comment/${commentId}/upvote`;
+        await axios.put(endpoint, { 
+          action,
+          ...(isReply && { replyId: commentId }) // Send replyId for replies
+        });
+        
 
     } catch (error) {
       // Revert on error

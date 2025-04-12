@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 
 export async function PUT(
   request: Request,
-  { params }: { params: { discussionId: string; commentId: string } }
+  { params }: { params: { id: string; commentId: string } }
 ) {
   await dbConnect();
   const session = await getServerSession(authOptions);
@@ -31,7 +31,7 @@ export async function PUT(
     };
 
     const updatedDiscussion = await DiscussionModel.findOneAndUpdate(
-      { _id: params.discussionId },
+      { _id: params.id },
       updateOperations[action as keyof typeof updateOperations],
       {
         new: true,
