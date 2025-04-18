@@ -1,6 +1,6 @@
 'use client';
 import { useSession } from 'next-auth/react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal } from 'react';
 import { Button } from '@/components/ui/button';
 import axios, { AxiosError } from 'axios';
 import { Loader2, Settings } from 'lucide-react';
@@ -10,6 +10,19 @@ import { Separator } from '@/components/ui/separator';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import Link from 'next/link';
+import { RatingChart } from '@/components/rating-chart';
+interface UserStats {
+  ratingHistory: Array<{
+    newrating: number;
+    timestamp: string;
+    contestTitle: string;
+  }>;
+  contestsJoined: Array<{
+    _id: string;
+    title: string;
+    startTime: string;
+  }>;
+}
 
 const Page = () => {
   const { data: session, status } = useSession();
@@ -17,22 +30,36 @@ const Page = () => {
   // Define userDetails state with correct type
   const [userDetails, setUserDetails] = useState<UserType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState<any>(null); // Adjust type as needed
 
   // Fetch user details from API
   const fetchUserDetails = useCallback(async () => {
-    if (!session?.user) return; // Ensure user is logged in
+    if (!session?.user) return;
 
     setIsLoading(true);
     try {
-      const response = await axios.get<UserType>(`/api/user`);
-      setUserDetails(response.data);
+      // Fetch basic user details
+      const userResponse = await axios.get<UserType>('/api/user');
+      setUserDetails(userResponse.data);
+
+      // Fetch rating history and contests participated
+      const statsResponse = await axios.get<UserStats>('/api/user/stats');
+      setStats(statsResponse.data);
     } catch (error) {
       const axiosError = error as AxiosError<{ message: string }>;
-      toast.error(axiosError.response?.data?.message || 'Failed to fetch user details');
+      toast.error(axiosError.response?.data?.message || 'Failed to fetch data');
     } finally {
       setIsLoading(false);
     }
   }, [session]);
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/user/stats');
+      setStats(res.data);
+    } catch (error) {
+      toast.error('Failed to fetch user stats');
+    }
+  }, []);
 
   useEffect(() => {
     if (session?.user) fetchUserDetails();
@@ -105,22 +132,60 @@ const Page = () => {
           </div>
         </CardContent>
       </Card>
+      
+  <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>Rating History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {stats?.ratingHistory?.length ? (
+            <RatingChart 
+              data={stats.ratingHistory.map((rh: { newrating: any; timestamp: any; contestTitle: any; }) => ({
+                newrating: rh.newrating,
+                timestamp: rh.timestamp,
+                contestTitle: rh.contestTitle
+              }))}
+            />
+          ) : (
+            <p className="text-center text-muted-foreground py-8">
+              No rating history available
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Contests Participated */}
+      {/* Contests Participated Card */}
       <Card className="mb-4">
         <CardHeader>
           <CardTitle>Contests Participated</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {userDetails?.contestsParticipated?.map((contestId) => (
-              <div key={contestId} className="text-sm">
-                Contest ID: {contestId}
-              </div>
-            ))}
+            {stats?.contestsJoined?.length ? (
+              stats.contestsJoined.map((contest: { _id: Key | null | undefined; title: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; startTime: string | number | Date; }) => (
+                <Link 
+                  key={contest._id} 
+                  href={`/contests/${contest._id}`}
+                  className="block p-2 hover:bg-gray-50 rounded transition-colors"
+                >
+                  <div className="text-sm font-medium text-primary">
+                    {contest.title}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {new Date(contest.startTime).toLocaleDateString()}
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <p className="text-center text-muted-foreground py-4">
+                No contests participated yet
+              </p>
+            )}
           </div>
         </CardContent>
-      </Card>
+      </Card>     
+        
+
 
       <Separator />
     </div>

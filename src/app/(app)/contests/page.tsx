@@ -33,6 +33,7 @@ const ContestListPage = () => {
   const [contests, setContests] = useState<Contest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRegistering, setIsRegistering] = useState<string | null>(null);
+  const [isUpdatingRatings, setIsUpdatingRatings] = useState<string | null>(null);
 
   const user = session?.user as SessionUser | undefined;
 
@@ -89,7 +90,20 @@ const ContestListPage = () => {
       setIsRegistering(null);
     }
   };
-
+  const handleUpdateRatings = async (contestId: string) => {
+    if (!user?._id || isUpdatingRatings) return;
+  
+    setIsUpdatingRatings(contestId);
+    try {
+      const res = await axios.post(`/api/contests/${contestId}/update-ratings`);
+      toast.success(res.data.message || 'Ratings updated successfully');
+    } catch (error) {
+      const axiosError = error as AxiosError<{ error: string }>;
+      toast.error(axiosError.response?.data?.error || 'Failed to update ratings');
+    } finally {
+      setIsUpdatingRatings(null);
+    }
+  };
   const renderContestButton = (contest: Contest) => {
     if (!user?._id) return null;
   
@@ -184,7 +198,12 @@ const ContestListPage = () => {
            <p className="text-center text-gray-500 mt-10">No contests found.</p>
         ) : (
            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {contests.map((contest) => (
+            {contests.map((contest) =>{
+              const now = new Date();
+              const startTime = new Date(contest.startTime);
+              const endTime = new Date(contest.endTime);
+              const isEnded = now >= endTime;
+              return (
               <Card key={contest._id} className="hover:shadow-lg transition-shadow flex flex-col justify-between">
                 <div>
                   <CardHeader>
@@ -194,7 +213,7 @@ const ContestListPage = () => {
                       Ends: {new Date(contest.endTime).toLocaleString()}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent >
                     <div className="flex justify-between items-center mb-4">
                        <span className={`badge ${
                             new Date() < new Date(contest.startTime) ? 'bg-blue-100 text-blue-800' :
@@ -221,8 +240,24 @@ const ContestListPage = () => {
                 <CardContent>
                      {renderContestButton(contest)}
                 </CardContent>
+                <CardContent className="flex flex-col gap-2">
+                
+            
+                {user?.role === 'admin' && isEnded && (
+                  <Button
+                    variant="outline"
+                    onClick={() => handleUpdateRatings(contest._id)}
+                    disabled={isUpdatingRatings === contest._id}
+                  >
+                    {isUpdatingRatings === contest._id && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Update Ratings
+                  </Button>
+                )}
+              </CardContent>
               </Card>
-            ))}
+            )})}
           </div>
         )
       }

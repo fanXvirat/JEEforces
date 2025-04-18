@@ -62,7 +62,7 @@ const UserSchema: Schema<User> = new Schema(
       },
       rating: {
         type: Number,
-        default: 0,
+        default: 300,
       },
       title: {
         type: String,

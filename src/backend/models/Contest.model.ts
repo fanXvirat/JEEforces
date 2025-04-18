@@ -28,6 +28,7 @@ export interface Contest extends Document{
     participants:mongoose.Schema.Types.ObjectId[];
     leaderboard:Leaderboard[];
     ispublished:boolean;
+    ratingsUpdated: boolean;
 }
 const ContestSchema: Schema<Contest> = new Schema({
     title:{
@@ -60,6 +61,10 @@ const ContestSchema: Schema<Contest> = new Schema({
     ispublished:{
         type:Boolean,
         required:true
+    },
+    ratingsUpdated: {
+        type: Boolean,
+        default: false,
     }
 });
 const ContestModel = (mongoose.models.Contest as mongoose.Model<Contest>) || mongoose.model<Contest>("Contest",ContestSchema);

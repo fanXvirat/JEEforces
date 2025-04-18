@@ -8,10 +8,16 @@ export interface UserType {
     rating?: number;
     problemsSolved?: number;
     contestsParticipated?: string[]; // Store ObjectId as string
-    ratingHistory?: {
+    contestsJoined: Array<{
+        _id: string;
+        title: string;
+        startTime: string;
+      }>;
+      ratingHistory: Array<{
         contestid: string;
         oldrating: number;
         newrating: number;
-        timestamp: string; // Convert Date to string
-    }[];
+        timestamp: Date;
+        contestTitle: string;
+      }>;
 }
