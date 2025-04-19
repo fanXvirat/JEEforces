@@ -3,6 +3,7 @@ import SubmissionModel from "@/backend/models/Submission.model";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import mongoose from "mongoose";
+import { title } from "process";
 
 export async function GET(request: Request) {
     await dbConnect();
@@ -73,6 +74,7 @@ export async function GET(request: Request) {
                     userId: "$_id",
                     username: "$userDetails.username",
                     avatar: "$userDetails.avatar",
+                    title: "$userDetails.title",
                     totalScore: 1,
                     lastSubmission: 1
                 }

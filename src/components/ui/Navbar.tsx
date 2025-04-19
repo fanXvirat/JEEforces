@@ -73,7 +73,7 @@ function Navbar() {
                         alt='User Avatar'
                         className='w-8 h-8 rounded-full'
                      />
-                     <span>{user?.name || user?.email}</span>
+                     <span>{user?.username || user?.email}</span>
                   </button>
 
                   {/* Dropdown Menu */}

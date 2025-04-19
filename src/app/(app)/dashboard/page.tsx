@@ -11,6 +11,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import Link from 'next/link';
 import { RatingChart } from '@/components/rating-chart';
+import { getTitleColor } from '@/lib/utils';
 interface UserStats {
   ratingHistory: Array<{
     newrating: number;
@@ -86,7 +87,8 @@ const Page = () => {
           className="w-16 h-16 rounded-full"
         />
         <div>
-          <h2 className="text-xl font-semibold">{userDetails?.username || 'Guest'}</h2>
+          <h2 className="text-xl font-semibold" style={{ color: getTitleColor(userDetails?.title || 'newbie') }}>{userDetails?.username || 'Guest'}</h2>
+          <p className="text-sm font-semibold" style={{ color: getTitleColor(userDetails?.title || 'newbie') }}>{userDetails?.title || 'newbie'}</p>
           <p className="text-gray-600">{userDetails?.email || 'No email provided'}</p>
         </div>
       </div>

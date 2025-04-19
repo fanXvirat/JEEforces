@@ -7,12 +7,16 @@ import { Loader2 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import Link from 'next/link';
+import { getTitleColor } from '@/lib/utils';
+
 
 interface LeaderboardUser {
   _id: string;
   username: string;
   avatar?: string;
   rating: number;
+  title: string;
   institute?: string;
   problemsSolved: number;
   accuracy: number;
@@ -113,7 +117,15 @@ export default function LeaderboardPage() {
                 <AvatarImage src={user.avatar} />
                 <AvatarFallback>{user.username[0]?.toUpperCase()}</AvatarFallback>
               </Avatar>
-              <span className="font-medium">{user.username}</span>
+              <span className="font-medium">
+                <Link 
+                  href={`/users/${user.username}`}
+                  style={{ color: getTitleColor(user.title) }}
+                  className="font-medium hover:underline"
+                  >
+                  {user.username}
+                  </Link>
+                </span>
             </div>
 
             <div className="col-span-3 text-gray-600">

@@ -69,7 +69,8 @@ export async function GET(request: Request) {
                     "author._id": 1,
                     "author.username": 1,
                     "author.name": 1,
-                    "author.email": 1
+                    "author.email": 1,
+                    "author.title": 1,
                 }
             },
             { $sort: { CreatedAt: -1 } }

@@ -17,12 +17,14 @@ import { format } from 'date-fns';
 import { VoteButtons } from '@/components/Upvote';
 import { toast } from 'sonner';
 import { Star} from 'lucide-react';
+import { getTitleColor } from '@/lib/utils';
 
 interface Discussion {
   _id: string;
   title: string;
   content: string;
-  author: { username: string };
+  author: { username: string 
+    title: string; avatar: string; };
   upvotes: string[];
   downvotes: string[];
   comments: any[];
@@ -109,7 +111,13 @@ export default function DiscussionsPage() {
             <CardHeader>
               <CardTitle>{discussion.title}</CardTitle>
               <div className="flex items-center text-sm text-gray-500">
-                <span>By {discussion.author.username}</span>
+                <span>By <Link 
+                  href={`/users/${discussion.author.username}`}
+                  style={{ color: getTitleColor(discussion.author.title) }}
+                  className="font-medium hover:underline"
+                  >
+                  {discussion.author.username}
+                  </Link></span>
                 <span className="mx-2">•</span>
                 <span>{format(new Date(discussion.CreatedAt), 'MMM dd, yyyy HH:mm')}</span>
               </div>

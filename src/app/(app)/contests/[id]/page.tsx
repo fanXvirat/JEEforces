@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
+import Link from 'next/link';
 
 interface Problem {
     _id: string;
@@ -132,6 +133,9 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold">{contest.title}</h1>
                 <div className="space-x-4">
+                    <Link href={`/contests/${contest._id}/standings`} className= "hover:bg-gray-100 px-4 py-2 rounded-md text-sm font-medium text-gray-700">
+                        View Standings
+                    </Link>
                     {isActive && (
                         <Button 
                             onClick={handleFinalSubmit} 

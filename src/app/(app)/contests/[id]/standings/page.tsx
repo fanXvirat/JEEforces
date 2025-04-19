@@ -7,6 +7,8 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@/components/ui/table';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { getTitleColor } from '@/lib/utils';
 
 interface LeaderboardEntry {
   userId: string;
@@ -15,6 +17,7 @@ interface LeaderboardEntry {
   totalScore: number;
   lastSubmission: string;
   rank: number;
+  title: string;
 }
 
 export default function Leaderboard() {
@@ -57,6 +60,11 @@ export default function Leaderboard() {
   return (
     <div className="mt-8 container mx-auto px-4">
       <h2 className="text-2xl font-bold mb-6">Leaderboard</h2>
+      <Link href={`/contests/${contestId}`}>
+      <Button variant="outline" className="mb-4">
+        Problems
+      </Button>
+      </Link>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -80,7 +88,14 @@ export default function Leaderboard() {
                         className="h-8 w-8 rounded-full"
                       />
                     )}
-                    <span>{entry.username}</span>
+                    <span><Link 
+                      href={`/users/${entry.username}`}
+                      style={{ color: getTitleColor(entry.title) }}
+                      className="font-medium hover:underline"
+                    >
+                      {entry.username}
+                    </Link>
+                    </span>
                   </TableCell>
                   <TableCell>{entry.totalScore}</TableCell>
                   <TableCell>

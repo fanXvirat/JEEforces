@@ -18,12 +18,14 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
+import { getTitleColor } from '@/lib/utils';
 
 interface Discussion {
   _id: string;
   title: string;
   content: string;
-  author: { username: string };
+  author: { username: string 
+    title: string; avatar: string;  };
   upvotes: string[];
   downvotes: string[];
   comments: any[];
@@ -144,7 +146,13 @@ export default function HomePage() {
               <CardHeader>
                 <CardTitle className="text-xl">{discussion.title}</CardTitle>
                 <div className="flex items-center text-sm text-muted-foreground">
-                  <span>By {discussion.author.username}</span>
+                  <span>By <Link 
+                  href={`/users/${discussion.author.username}`}
+                  style={{ color: getTitleColor(discussion.author.title) }}
+                  className="font-medium hover:underline"
+                  >
+                  {discussion.author.username}
+                  </Link></span>
                   <span className="mx-2">•</span>
                   <span>{format(new Date(discussion.CreatedAt), 'MMM dd')}</span>
                 </div>

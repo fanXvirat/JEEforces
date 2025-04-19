@@ -10,11 +10,14 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { VoteButtons } from '@/components/Upvote';
 import { VoteButtonsComment } from '@/components/Upvotecomment';
+import Link from 'next/link';
+import { getTitleColor } from '@/lib/utils';
 
 interface Comment {
   _id: string;
   text: string;
-  author: { username: string };
+  author: { username: string 
+    title: string; avatar: string;  };
   upvotes: string[];
   downvotes: string[];
   CreatedAt: string;
@@ -25,7 +28,8 @@ interface Discussion {
   _id: string;
   title: string;
   content: string;
-  author: { username: string };
+  author: { username: string 
+    title: string; avatar: string; };
   upvotes: string[];
   downvotes: string[];
   comments: Comment[];
@@ -132,7 +136,13 @@ export default function DiscussionPage() {
           />
         </div>
         <div className="flex items-center text-sm text-gray-500 mb-4">
-          <span>By {discussion.author.username}</span>
+          <span>By <Link 
+                  href={`/users/${discussion.author.username}`}
+                  style={{ color: getTitleColor(discussion.author.title) }}
+                  className="font-medium hover:underline"
+                  >
+                  {discussion.author.username}
+                  </Link></span>
           <span className="mx-2">•</span>
           <span>{format(new Date(discussion.CreatedAt), 'MMM dd, yyyy HH:mm')}</span>
         </div>
@@ -158,7 +168,15 @@ export default function DiscussionPage() {
             <div key={comment._id} className="border rounded p-4">
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center text-sm text-gray-500">
-                  <span>{comment.author.username}</span>
+                  <span> 
+                  <Link 
+                  href={`/users/${comment.author.username}`}
+                  style={{ color: getTitleColor(comment.author.title) }}
+                  className="font-medium hover:underline"
+                  >
+                  {comment.author.username}
+                  </Link>
+                    </span>
                   <span className="mx-2">•</span>
                   <span>{format(new Date(comment.CreatedAt), 'MMM dd, HH:mm')}</span>
                 </div>
@@ -175,7 +193,15 @@ export default function DiscussionPage() {
                   <div key={reply._id} className="border-l-2 pl-4">
                     <div className="flex justify-between items-start mb-1">
                       <div className="flex items-center text-sm text-gray-500">
-                        <span>{reply.author.username}</span>
+                        <span>
+                        <Link 
+                  href={`/users/${reply.author.username}`}
+                  style={{ color: getTitleColor(reply.author.title) }}
+                  className="font-medium hover:underline"
+                  >
+                  {reply.author.username}
+                  </Link>
+                        </span>
                         <span className="mx-2">•</span>
                         <span>{format(new Date(reply.CreatedAt), 'MMM dd, HH:mm')}</span>
                       </div>

@@ -6,6 +6,7 @@ export interface UserType {
     institute?: string;
     yearofstudy?: number;
     rating?: number;
+    title?: string;
     problemsSolved?: number;
     contestsParticipated?: string[]; // Store ObjectId as string
     contestsJoined: Array<{

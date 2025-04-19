@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { getTitleColor } from '@/lib/utils';
 
 interface Contest {
   _id: string;
@@ -32,6 +33,7 @@ interface LeaderboardUser {
   _id: string;
   username: string;
   rating: number;
+  title: string;
 }
 
 interface SessionUser {
@@ -209,7 +211,13 @@ export function Sidebar() {
                 <div key={user._id} className="flex justify-between items-center">
                   <div className="flex items-center space-x-2">
                     <span className="font-medium">{index + 1}.</span>
-                    <span>{user.username}</span>
+                    <span><Link 
+                  href={`/users/${user.username}`}
+                  style={{ color: getTitleColor(user.title) }}
+                  className="font-medium hover:underline"
+                  >
+                  {user.username}
+                  </Link></span>
                   </div>
                   <Badge variant="outline">Rating: {user.rating}</Badge>
                 </div>

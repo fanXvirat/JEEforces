@@ -9,9 +9,9 @@ export async function GET(request: Request) {
 
     try {
         const discussion = await DiscussionModel.findById(id)
-            .populate("author", "username")
-            .populate("comments.author", "username")
-            .populate("comments.replies.author", "username");
+            .populate("author", "username title")
+            .populate("comments.author", "username title")
+            .populate("comments.replies.author", "username title");
 
         if (!discussion) {
             return Response.json({ error: "Discussion not found" }, { status: 404 });
