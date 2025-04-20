@@ -46,11 +46,19 @@ export async function GET(request: Request) {
       // Add filters if needed
       const difficulty = searchParams.get('difficulty');
       const subject = searchParams.get('subject');
+      const searchTerm = searchParams.get('search');
       
       if (difficulty) query.difficulty = parseInt(difficulty);
       if (subject) query.subject = subject;
   
       // Fetch problems with the required fields only
+      if (searchTerm) {
+        const searchRegex = new RegExp(searchTerm.trim(), 'i'); // Case-insensitive regex
+        query.$or = [
+            { title: { $regex: searchRegex } },
+            { tags: { $regex: searchRegex } }
+        ];
+    }
       const problems = await ProblemModel.find(query, "_id title difficulty score tags subject")
         .sort({ createdAt: -1 }); // Newest first
   

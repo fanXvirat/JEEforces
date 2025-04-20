@@ -117,6 +117,7 @@ export default function SettingsPage() {
   }, [session?.user?.id, reset]);
 
   const handleUploadResult = (result: CloudinaryResult) => {
+    document.body.style.overflow = 'auto';
     console.log("Cloudinary upload result:", result);
     setDebugStatus(`Upload callback received: ${JSON.stringify(result).substring(0, 100)}...`);
 
@@ -318,11 +319,12 @@ export default function SettingsPage() {
                             setDebugStatus(`Upload error: ${JSON.stringify(error)}`);
                             toast.error(`Upload failed: ${error?.message || 'Unknown error'}`);
                           }}
+                          className='outline outline-1 outline-gray-300 rounded-md hover:outline-gray-400 transition duration-200 ease-in-out'
                         >
                           {/* Style the button using a standard Button component */}
-                          <Button type="button" variant="outline" size="sm">
+                          
                              {avatarUrl ? "Change Avatar" : "Upload Avatar"}
-                          </Button>
+                          
                         </CldUploadButton>
                      </div>
 
