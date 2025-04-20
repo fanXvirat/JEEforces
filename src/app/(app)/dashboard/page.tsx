@@ -12,6 +12,8 @@ import { Progress } from '@/components/ui/progress';
 import Link from 'next/link';
 import { RatingChart } from '@/components/rating-chart';
 import { getTitleColor } from '@/lib/utils';
+import { CldImage } from 'next-cloudinary';
+
 interface UserStats {
   ratingHistory: Array<{
     newrating: number;
@@ -81,11 +83,21 @@ const Page = () => {
 
       {/* Profile Section */}
       <div className="flex items-center space-x-4 mb-4">
-        <img
-          src={userDetails?.avatar || '/default-avatar.png'}
-          alt="User Avatar"
-          className="w-16 h-16 rounded-full"
-        />
+      {userDetails?.avatar ? (
+          <CldImage
+            width={64}
+            height={64}
+            src={userDetails.avatar}
+            alt="User Avatar"
+            className="rounded-full"
+          />
+        ) : (
+          <img
+            src="/default-avatar.png" 
+            alt="Default Avatar"
+            className="w-16 h-16 rounded-full"
+          />
+        )}
         <div>
           <h2 className="text-xl font-semibold" style={{ color: getTitleColor(userDetails?.title || 'newbie') }}>{userDetails?.username || 'Guest'}</h2>
           <p className="text-sm font-semibold" style={{ color: getTitleColor(userDetails?.title || 'newbie') }}>{userDetails?.title || 'newbie'}</p>

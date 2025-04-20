@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import axios from 'axios';
 import Link from 'next/link';
 import { Loader2, ArrowLeft, Edit } from 'lucide-react';
-import { DifficultyBadge } from '@/components/ui/difficulty-badge';
+import { DifficultyBadge } from '@/components/ui/difficulty-badge'; // Assuming you have this
 import { Badge } from '@/components/ui/badge';
 
 interface ProblemDetails {
@@ -21,63 +21,113 @@ interface ProblemDetails {
   correctOption: string;
   solution: string;
   author: {
-    username: string;
+    username: string; // Assuming API populates author like this
   };
+  imageUrl?: string; // Already exists, great!
 }
 
 export default function ProblemDetailPage() {
   const { id } = useParams();
-  const { data: session } = useSession();
+  const { data: session, status: authStatus } = useSession(); // Get auth status
   const [problem, setProblem] = useState<ProblemDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null); // Store option *text*
   const [showSolution, setShowSolution] = useState(false);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null); // State for check result
 
   useEffect(() => {
-    const fetchProblem = async () => {
-      try {
-        const { data } = await axios.get(`/api/problems/${id}`);
-        setProblem(data);
-      } catch (error) {
-        console.error('Error fetching problem:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProblem();
+    if (id) { // Only fetch if ID is available
+      const fetchProblem = async () => {
+        setLoading(true); // Ensure loading is true at start
+        try {
+          const { data } = await axios.get(`/api/problems/${id}`);
+          setProblem(data);
+        } catch (error) {
+          console.error('Error fetching problem:', error);
+          setProblem(null); // Set to null on error
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchProblem();
+    } else {
+      setLoading(false); // No ID, not loading
+    }
   }, [id]);
 
-  if (loading) {
+  const handleOptionSelect = (optionText: string) => {
+      setSelectedOption(optionText);
+      setIsCorrect(null); // Reset correctness check when a new option is selected
+      setShowSolution(false); // Hide solution when selecting new option
+  };
+
+  const checkAnswer = () => {
+      if (selectedOption === null || !problem) return;
+      const correct = selectedOption === problem.correctOption;
+      setIsCorrect(correct);
+      setShowSolution(true); // Show solution after checking
+  };
+
+
+  if (loading || authStatus === 'loading') { // Check auth loading too
     return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
       </div>
     );
   }
 
-  if (!problem) return <div>Problem not found</div>;
+  if (!problem) {
+     return (
+        <div className="flex flex-col items-center justify-center h-screen">
+            <p className="text-xl text-red-600 mb-4">Problem not found or failed to load.</p>
+            <Link href="/problems">
+                <Button variant="outline">
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back to Problems
+                </Button>
+            </Link>
+        </div>
+     )
+  }
+
+  // Determine border color based on selection and correctness check
+  const getOptionBorderColor = (optionText: string) => {
+      if (selectedOption !== optionText) return 'border-gray-200 hover:border-gray-400'; // Default/hover
+      if (isCorrect === null) return 'border-blue-500 bg-blue-50'; // Selected, not checked
+      if (isCorrect === true) return 'border-green-500 bg-green-50'; // Correct
+      if (isCorrect === false) return 'border-red-500 bg-red-50'; // Incorrect
+      return 'border-gray-200'; // Fallback
+  };
+
 
   return (
-    <div className="my-8 mx-4 md:mx-8 lg:mx-auto p-6 bg-white rounded w-full max-w-4xl">
-      <Link href="/problems" className="flex items-center mb-6 text-blue-600 hover:underline">
+    // Increased max-width for wider content area
+    <div className="container mx-auto px-4 py-8 max-w-5xl">
+      <Link href="/problems" className="inline-flex items-center mb-6 text-blue-600 hover:underline">
         <ArrowLeft className="h-4 w-4 mr-1" />
         Back to Problems
       </Link>
 
-      <div className="space-y-6">
-        <div className="flex justify-between items-start">
+      <div className="bg-white p-6 md:p-8 rounded-lg shadow-md border border-gray-200 space-y-6">
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4 border-b">
           <div>
-            <h1 className="text-3xl font-bold mb-2">{problem.title}</h1>
-            <div className="flex items-center gap-2 mb-4">
+            <h1 className="text-2xl md:text-3xl font-bold mb-2 text-gray-800">{problem.title}</h1>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
               <DifficultyBadge difficulty={problem.difficulty} />
               <Badge variant="outline">{problem.subject}</Badge>
-              <span className="text-sm text-gray-600">Score: {problem.score}</span>
+              <Badge variant="secondary">Score: {problem.score}</Badge>
+               {problem.tags && problem.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                     {problem.tags.map(tag => <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>)}
+                  </div>
+               )}
             </div>
           </div>
           {session?.user?.role === 'admin' && (
-            <Link href={`/problems/create?id=${id}`}>
-              <Button variant="outline">
+            <Link href={`/problems/create?id=${problem._id}`} className="flex-shrink-0 mt-2 sm:mt-0">
+              <Button variant="outline" size="sm">
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </Button>
@@ -85,47 +135,96 @@ export default function ProblemDetailPage() {
           )}
         </div>
 
-        <div dangerouslySetInnerHTML={{ __html: problem.description }} />
+        {/* Problem Image Display Section */}
+        {problem.imageUrl && (
+          <div className="my-4 py-4 border-y flex justify-center">
+            <img
+              src={problem.imageUrl}
+              alt={`Problem illustration: ${problem.title}`} // More descriptive alt text
+              className="block max-w-full md:max-w-2xl w-auto h-auto max-h-[500px] object-contain rounded-md bg-gray-50 p-1 border shadow-sm" // Styling for the image
+              loading="lazy" // Lazy load images
+            />
+          </div>
+        )}
 
-        <div className="space-y-2">
+        {/* Problem Description */}
+        {/* Added prose for better typography if description contains markdown/html */}
+        <div
+            className="prose prose-sm sm:prose-base max-w-none text-gray-700"
+            dangerouslySetInnerHTML={{ __html: problem.description }}
+        />
+
+        {/* Options Section */}
+        <div className="space-y-3 pt-4">
+           <h2 className="text-lg font-semibold text-gray-800">Options</h2>
           {problem.options.map((option, index) => (
             <div
               key={index}
-              className={`p-4 border rounded cursor-pointer ${
-                selectedOption === index ? 'bg-blue-50 border-blue-500' : ''
-              }`}
-              onClick={() => setSelectedOption(index)}
+              className={`p-3 border rounded-md cursor-pointer transition-colors duration-150 ${getOptionBorderColor(option)}`}
+              onClick={() => handleOptionSelect(option)}
+              role="radio" // Semantics
+              aria-checked={selectedOption === option}
+              tabIndex={0} // Make it focusable
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleOptionSelect(option)} // Keyboard accessibility
             >
-              <div className="flex items-center">
-                <span className="font-medium mr-2">{String.fromCharCode(65 + index)}.</span>
+              <div className="flex items-start sm:items-center">
+                <span className="font-semibold mr-3 text-gray-700">{String.fromCharCode(65 + index)}.</span>
+                {/* Render option text - assuming it might be simple HTML */}
                 <span dangerouslySetInnerHTML={{ __html: option }} />
               </div>
             </div>
           ))}
         </div>
 
-        <div className="flex gap-2">
-          <Button 
+        {/* Action Buttons */}
+        <div className="flex flex-wrap gap-3 pt-4">
+          <Button
+             onClick={checkAnswer}
+             disabled={selectedOption === null}
+             size="lg"
+          >
+            Check Answer
+          </Button>
+          <Button
             onClick={() => setShowSolution(!showSolution)}
-            variant={showSolution ? 'default' : 'outline'}
+            variant="outline"
+            size="lg"
+            aria-expanded={showSolution}
           >
             {showSolution ? 'Hide Solution' : 'Show Solution'}
           </Button>
         </div>
 
+        {/* Check Result Feedback */}
+        {isCorrect !== null && (
+            <div className={`mt-4 p-3 rounded-md text-sm font-medium ${isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {isCorrect ? 'Correct!' : 'Incorrect. Try again or view the solution.'}
+            </div>
+        )}
+
+
+        {/* Solution Section (Conditional) */}
         {showSolution && (
-          <div className="p-4 bg-gray-50 rounded">
-            <h3 className="font-medium mb-2">Solution</h3>
-            <div dangerouslySetInnerHTML={{ __html: problem.solution }} />
-            <p className="mt-2 text-sm text-gray-600">
-              {problem.correctOption}
+          <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md shadow-sm">
+            <h3 className="text-lg font-semibold mb-3 text-gray-800">Solution</h3>
+            {/* Check if solution exists before rendering */}
+            {problem.solution ? (
+                 <div className="prose prose-sm sm:prose-base max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: problem.solution }} />
+            ) : (
+                <p className="text-gray-600">No detailed solution provided.</p>
+            )}
+             <p className="mt-4 pt-3 border-t text-sm font-medium text-gray-800">
+              Correct Answer: <span className="font-bold" dangerouslySetInnerHTML={{ __html: problem.correctOption }} />
             </p>
           </div>
         )}
 
-        <div className="text-sm text-gray-500">
-          Created by: {problem.author.username}
-        </div>
+        {/* Author Info (Optional) */}
+        {problem.author?.username && (
+            <div className="text-xs text-gray-400 pt-4 text-right border-t">
+                Problem added by: {problem.author.username}
+            </div>
+        )}
       </div>
     </div>
   );

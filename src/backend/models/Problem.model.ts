@@ -10,6 +10,7 @@ export interface Problem extends Document{
     solution:string;
     options:string[];
     correctOption:string;
+    imageUrl?: string;
 }
 const ProblemSchema: Schema<Problem> = new Schema({
     title:{
@@ -50,6 +51,10 @@ const ProblemSchema: Schema<Problem> = new Schema({
     correctOption:{
         type:String,
         required:true
+    },
+    imageUrl: {         
+        type: String,
+        required: false 
     }
 });
 const ProblemModel = (mongoose.models.Problem as mongoose.Model<Problem>) || mongoose.model<Problem>("Problem",ProblemSchema);

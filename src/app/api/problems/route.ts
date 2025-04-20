@@ -26,6 +26,7 @@ export async function POST(request: Request) {
             solution: data.solution,
             options: data.options,
             correctOption: data.correctOption,
+            imageUrl: data.imageUrl || null,
         });
 
         return Response.json(newProblem, { status: 201 });

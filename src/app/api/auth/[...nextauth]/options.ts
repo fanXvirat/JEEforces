@@ -49,6 +49,7 @@ export const authOptions: NextAuthOptions = {
             username: user.username,
             email: user.email,
             role: user.role,
+            avatar: user.avatar,
           };
         } catch (err: any) {
           throw new Error(err.message || 'Failed to authenticate');
@@ -62,6 +63,7 @@ export const authOptions: NextAuthOptions = {
         token._id = user._id; // Add user ID to the token
         token.username = user.username;
         token.role = user.role; // Add role to the token (if needed)
+        token.avatar = user.avatar;
       }
       return token;
     },
@@ -70,6 +72,7 @@ export const authOptions: NextAuthOptions = {
         session.user._id = token._id;
         session.user.username = token.username; // Add role to the session (if needed)
         session.user.role = token.role;
+        session.user.avatar = token.avatar;
       }
       return session;
     },

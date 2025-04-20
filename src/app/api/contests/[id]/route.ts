@@ -42,7 +42,7 @@ export async function GET(request: Request) {
             .populate({
                 path: 'problems',
                 model: ProblemModel, // Explicitly reference the model
-                select: 'title description options correctOption score subject'
+                select: 'title description options correctOption score subject imageUrl'
             })
             .populate('participants', 'name email')
             .lean();

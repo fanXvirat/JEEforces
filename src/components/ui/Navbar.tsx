@@ -69,7 +69,7 @@ function Navbar() {
                      onClick={() => setProfileOpen(!profileOpen)}
                   >
                      <img
-                        src={user?.image || '/default-avatar.png'}
+                        src={user?.avatar || '/default-avatar.png'}
                         alt='User Avatar'
                         className='w-8 h-8 rounded-full'
                      />
