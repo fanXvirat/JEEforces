@@ -1,28 +1,32 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PanelLeftClose, PanelRightClose, CalendarClock, Trophy, MessagesSquare, ExternalLink } from 'lucide-react'; // Updated icons
+import { PanelLeftClose, PanelRightClose, CalendarClock, Trophy, MessagesSquare, ExternalLink } from 'lucide-react';
 import axios from 'axios';
 import Link from 'next/link';
-import { Duration, formatDistanceToNow, intervalToDuration } from 'date-fns';
+import { Duration, intervalToDuration } from 'date-fns'; // formatDistanceToNow is only used for discussions, might be small enough
 import { usePathname, useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { useSession } from 'next-auth/react';
-import { getTitleColor, cn } from '@/lib/utils'; // Import cn
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'; // Import Tooltip components
+import { getTitleColor, cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { formatDistanceToNow } from 'date-fns'; // Only used for discussions, can be optimized later
 
-// Interfaces (assuming SessionUser is correctly defined elsewhere or inline if simple)
+// Import useQuery from TanStack Query
+import { useQuery } from '@tanstack/react-query';
+
+// Updated Interfaces to reflect optimized API responses
 interface Contest {
     _id: string;
     title: string;
     startTime: string;
     endTime: string;
     ispublished: boolean;
-    participants: Array<{ _id: string }>;
+    isRegistered?: boolean; // New field from backend
 }
 
 interface Discussion {
@@ -38,36 +42,43 @@ interface LeaderboardUser {
     title: string;
 }
 
-// Assuming SessionUser type from next-auth + potential custom fields
 type SessionUser = {
     _id?: string;
     name?: string | null | undefined;
     email?: string | null | undefined;
     image?: string | null | undefined;
     role?: string;
-    // Add other custom fields if they exist on your session user object
 };
 
-// --- Contest Timer Component ---
+// Helper function for contest status (kept as is, it's efficient)
+const getStatus = (contest: Contest): 'upcoming' | 'active' | 'finished' => {
+    const now = new Date();
+    const start = new Date(contest.startTime);
+    const end = new Date(contest.endTime);
+    if (now < start) return 'upcoming';
+    if (now >= end) return 'finished';
+    return 'active';
+};
+
+// --- Contest Timer Component --- (No changes needed, already memoized and efficient)
 const ContestTimer = React.memo(({ contest }: { contest: Contest }) => {
     const [timeLeft, setTimeLeft] = useState<Duration | null>(null);
     const [statusInfo, setStatusInfo] = useState<{ status: 'upcoming' | 'active' | 'finished'; prefix: string }>({ status: 'finished', prefix: 'Contest Ended' });
 
-    const getStatus = (contest: Contest): 'upcoming' | 'active' | 'finished' => {
-      const now = new Date();
-      const start = new Date(contest.startTime);
-      const end = new Date(contest.endTime);
-      
-      if (now < start) return 'upcoming';
-      if (now > end) return 'finished';
-      return 'active';
+    // getStatus (local to timer)
+    const getContestStatus = (contest: Contest): 'upcoming' | 'active' | 'finished' => {
+        const now = new Date();
+        const start = new Date(contest.startTime);
+        const end = new Date(contest.endTime);
+        if (now < start) return 'upcoming';
+        if (now > end) return 'finished';
+        return 'active';
     };
 
-    useEffect(() => {
+    React.useEffect(() => {
         let intervalId: NodeJS.Timeout | null = null;
-
         const updateTimer = () => {
-            const currentStatus = getStatus(contest);
+            const currentStatus = getContestStatus(contest);
             const now = new Date();
             let targetDate: Date | null = null;
             let prefix = 'Contest Ended';
@@ -85,23 +96,19 @@ const ContestTimer = React.memo(({ contest }: { contest: Contest }) => {
             if (targetDate && now < targetDate) {
                 setTimeLeft(intervalToDuration({ start: now, end: targetDate }));
             } else {
-                setTimeLeft(null); // Contest ended or calculation not needed
-                if (intervalId) clearInterval(intervalId); // Clear interval if ended
+                setTimeLeft(null);
+                if (intervalId) clearInterval(intervalId);
             }
         };
 
-        updateTimer(); // Initial call
-
-        // Set up interval only if the contest is not finished
-        if (getStatus(contest) !== 'finished') {
-            intervalId = setInterval(updateTimer, 1000); // Update every second
+        updateTimer();
+        if (getContestStatus(contest) !== 'finished') {
+            intervalId = setInterval(updateTimer, 1000);
         }
-
-        // Cleanup interval on component unmount or when contest changes
         return () => {
             if (intervalId) clearInterval(intervalId);
         };
-    }, [contest]); // Rerun effect if contest prop changes
+    }, [contest]);
 
     return (
         <div className="text-right text-xs flex-shrink-0 ml-2">
@@ -120,89 +127,88 @@ const ContestTimer = React.memo(({ contest }: { contest: Contest }) => {
         </div>
     );
 });
-ContestTimer.displayName = 'ContestTimer'; // Add display name for React DevTools
+ContestTimer.displayName = 'ContestTimer';
 
 // --- Main Sidebar Component ---
 export function Sidebar() {
     const { data: session } = useSession();
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const [contests, setContests] = useState<Contest[]>([]);
-    const [discussions, setDiscussions] = useState<Discussion[]>([]);
-    const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
-    const [loading, setLoading] = useState(true);
     const pathname = usePathname();
     const router = useRouter();
     const user = session?.user as SessionUser | undefined;
 
     const isContestPage = (contestId: string) => {
-      return pathname === `/contests/${contestId}`; // Exact match
+      return pathname === `/contests/${contestId}`;
     };
 
-    useEffect(() => {
-        let isMounted = true; // Flag to prevent state updates on unmounted component
-        setLoading(true); // Set loading true on initial fetch or re-fetch trigger
+    // Fetcher functions for useQuery
+    const fetchContests = async () => {
+        const res = await axios.get<Contest[]>('/api/contests?forSidebar=true'); // Use new param
+        return res.data;
+    };
 
-        const fetchData = async () => {
-            try {
-                const [contestsRes, discussionsRes, leaderboardRes] = await Promise.all([
-                    axios.get<Contest[]>('/api/contests'), // Assume API returns { contests: [...] } and can filter published
-                    axios.get<{ discussions: Discussion[] }>('/api/discussions?limit=5&sort=CreatedAt:desc'), // Assume API returns { discussions: [...] } and can limit/sort
-                    axios.get<{ leaderboard: LeaderboardUser[] }>('/api/leaderboard?limit=5') // Assume API returns { leaderboard: [...] }
-                ]);
+    const fetchDiscussions = async () => {
+        // Backend will implement limit & sort
+        const res = await axios.get<{ discussions: Discussion[] }>('/api/discussions?limit=5&sort=CreatedAt:desc');
+        return res.data.discussions;
+    };
 
-                if (isMounted) {
-                    setContests(contestsRes.data || []); // Access the contests property
-                    setDiscussions(discussionsRes.data.discussions || []);
-                    setLeaderboard(leaderboardRes.data.leaderboard || []);
-                }
-            } catch (error) {
-                console.error('Sidebar data fetch error:', error);
-                if (isMounted) {
-                     // Optionally show toast, but maybe avoid for background refresh
-                     // toast.error("Failed to refresh sidebar data");
-                }
-            } finally {
-                if (isMounted) {
-                    setLoading(false);
-                }
-            }
-        };
+    const fetchLeaderboard = async () => {
+        // Backend will implement limit & forSidebar
+        const res = await axios.get<{ leaderboard: LeaderboardUser[] }>('/api/leaderboard?limit=5&forSidebar=true');
+        return res.data.leaderboard;
+    };
 
-        fetchData(); // Initial fetch
+    // TanStack Query hooks
+    const { data: contests = [], isLoading: isLoadingContests, isFetching: isFetchingContests } = useQuery<Contest[]>({
+        queryKey: ['sidebarContests'],
+        queryFn: fetchContests,
+        refetchInterval: 60000, // Refetch every 60 seconds
+        staleTime: 30000, // Data is fresh for 30s, then refetch in background on re-mount/window focus
+        select: (data) => data.filter(c => c.ispublished && getStatus(c) !== 'finished')
+                              .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+    });
 
-        // Set up interval for refreshing data (e.g., every minute)
-        const intervalId = setInterval(fetchData, 60000);
+    const { data: discussions = [], isLoading: isLoadingDiscussions, isFetching: isFetchingDiscussions } = useQuery<Discussion[]>({
+        queryKey: ['sidebarDiscussions'],
+        queryFn: fetchDiscussions,
+        refetchInterval: 60000,
+        staleTime: 30000,
+    });
 
-        // Cleanup function
-        return () => {
-            isMounted = false; // Set flag to false when component unmounts
-            clearInterval(intervalId); // Clear the interval
-        };
-    }, []); // Empty dependency array means this effect runs once on mount and cleans up on unmount
+    const { data: leaderboard = [], isLoading: isLoadingLeaderboard, isFetching: isFetchingLeaderboard } = useQuery<LeaderboardUser[]>({
+        queryKey: ['sidebarLeaderboard'],
+        queryFn: fetchLeaderboard,
+        refetchInterval: 60000,
+        staleTime: 30000,
+    });
+
+    // Combine loading states for skeleton display
+    const loading = isLoadingContests || isLoadingDiscussions || isLoadingLeaderboard;
+    // You can also use isFetching for a more "active" loading indicator during background refreshes
 
     const handleContestClick = (contest: Contest) => {
         const now = new Date();
         const startTime = new Date(contest.startTime);
         const endTime = new Date(contest.endTime);
 
-        // Check if user is authenticated for registration check
+        // Use the new `isRegistered` flag from backend if available
+        const isRegistered = contest.isRegistered ?? false;
+
         if (!user?._id) {
              if (now < startTime) {
                 toast.info('Contest has not started yet.');
              } else if (now >= startTime && now < endTime) {
                 toast.error('Please sign in to register and participate.');
-             } else {
-                 router.push(`/contests/${contest._id}`); // Allow viewing finished contests even if not logged in
              }
+             // Always allow viewing finished contests or upcoming contests even if not logged in
+             router.push(`/contests/${contest._id}`);
              return;
         }
 
-        const isRegistered = contest.participants?.some(p => p._id === user._id) ?? false;
-
         if (now < startTime) {
             toast.info('Contest has not started yet. Registration might be open.');
-            // Optionally redirect to contest page anyway if registration happens there
-            router.push(`/contests/${contest._id}`); // Let contest page handle registration display
+            router.push(`/contests/${contest._id}`);
             return;
         }
 
@@ -221,29 +227,12 @@ export function Sidebar() {
         router.push(`/contests/${contest._id}`);
     };
 
-    // Memoize filtered contests to avoid re-filtering on every render
-    const getStatus = (contest: Contest): 'upcoming' | 'active' | 'finished' => {
-      const now = new Date();
-      const start = new Date(contest.startTime);
-      const end = new Date(contest.endTime);
-      if (now < start) return 'upcoming';
-      if (now >= end) return 'finished'; // Use >= for end time check
-      return 'active';
-  };
-    const upcomingOrActiveContests = useMemo(() => {
-      return contests
-        .filter(c => c.ispublished && getStatus(c) !== 'finished')
-        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-    }, [contests]);
-
-
-
     return (
         <TooltipProvider delayDuration={100}>
             <aside
                 className={cn(
-                    "sticky top-16 h-[calc(100vh-4rem)] border-r bg-background transition-all duration-300 ease-in-out", // Use sticky positioning relative to viewport
-                    isCollapsed ? "w-[60px]" : "w-[280px] lg:w-[320px]" // Slightly wider on larger screens
+                    "sticky top-16 h-[calc(100vh-4rem)] border-r bg-background transition-all duration-300 ease-in-out",
+                    isCollapsed ? "w-[60px]" : "w-[280px] lg:w-[320px]"
                 )}
             >
                 <Tooltip>
@@ -253,7 +242,7 @@ export function Sidebar() {
                             size="icon"
                             className={cn(
                                 "absolute top-3 z-10 h-7 w-7 rounded-full",
-                                isCollapsed ? "right-1/2 translate-x-1/2" : "right-3" // Center when collapsed, top-right when expanded
+                                isCollapsed ? "right-1/2 translate-x-1/2" : "right-3"
                             )}
                             onClick={() => setIsCollapsed(!isCollapsed)}
                         >
@@ -266,10 +255,9 @@ export function Sidebar() {
                     </TooltipContent>
                 </Tooltip>
 
-                 {/* Content Area */}
                 <div className={cn(
-                    "h-full overflow-y-auto overflow-x-hidden pt-12", // Add padding top to avoid content overlapping button
-                    isCollapsed ? "opacity-0 pointer-events-none" : "opacity-100 p-3" // Hide content visually and from interaction when collapsed
+                    "h-full overflow-y-auto overflow-x-hidden pt-12",
+                    isCollapsed ? "opacity-0 pointer-events-none" : "opacity-100 p-3"
                     )}
                 >
                     <div className="space-y-4">
@@ -283,12 +271,12 @@ export function Sidebar() {
                                 <CardDescription className="text-xs">Upcoming & Active</CardDescription>
                             </CardHeader>
                             <CardContent className="px-3 pb-3 space-y-2">
-                                {loading ? (
+                                {loading ? ( // Use combined loading state
                                     Array(3).fill(0).map((_, i) => (
                                         <Skeleton key={i} className="h-[50px] w-full rounded-md" />
                                     ))
-                                ) : upcomingOrActiveContests.length > 0 ? (
-                                    upcomingOrActiveContests.map(contest => {
+                                ) : contests.length > 0 ? (
+                                    contests.map(contest => {
                                         const status = getStatus(contest);
                                         const isActivePage = isContestPage(contest._id);
                                         return (
@@ -297,7 +285,7 @@ export function Sidebar() {
                                                 onClick={() => handleContestClick(contest)}
                                                 className={cn(
                                                     `p-2 rounded-md border hover:bg-muted cursor-pointer transition-colors`,
-                                                    isActivePage && 'border-primary bg-muted' // Simplified active style
+                                                    isActivePage && 'border-primary bg-muted'
                                                 )}
                                             >
                                                 <div className="flex justify-between items-start">
@@ -354,7 +342,7 @@ export function Sidebar() {
                                                         href={`/users/${lbUser.username}`}
                                                         style={{ color: getTitleColor(lbUser.title) }}
                                                         className="font-medium hover:underline truncate"
-                                                        title={lbUser.username} // Tooltip for potentially truncated names
+                                                        title={lbUser.username}
                                                     >
                                                         {lbUser.username}
                                                     </Link>

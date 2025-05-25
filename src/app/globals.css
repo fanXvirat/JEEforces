@@ -107,6 +107,10 @@
     --chart-5: 210 75% 60%;
     
     --radius: 0.5rem
+
+    --accent: 258 70% 12%;
+
+    --accent-foreground: 258 15% 98%;
   }
 }
 

@@ -37,6 +37,7 @@ interface ContestEntry {
 interface UserStats {
   ratingHistory: Array<RatingHistoryEntry>;
   contestsJoined: Array<ContestEntry>;
+  accuracy: number;
 }
 
 // Helper to get initials from username (if not already available globally)
@@ -62,13 +63,20 @@ export default function DashboardPage() { // Renamed component for clarity
     setIsLoading(true);
     try {
       // Fetch both user details and stats concurrently
-      const [userResponse, statsResponse] = await Promise.all([
+      const [userResponse, statsResponse,accuracyResponse] = await Promise.all([
         axios.get<UserType>('/api/user'),
-        axios.get<UserStats>('/api/user/stats')
+        axios.get<UserStats>('/api/user/stats'),
+        axios.get('/api/user/statts')
       ]);
-
-      setUserDetails(userResponse.data);
-      setUserStats(statsResponse.data);
+      setUserDetails({
+      ...userResponse.data,
+      problemsSolved: accuracyResponse.data.problemsSolved
+      });
+    
+      setUserStats({
+        ...statsResponse.data,
+        accuracy: accuracyResponse.data.accuracy
+      });
 
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
@@ -207,9 +215,9 @@ export default function DashboardPage() { // Renamed component for clarity
                <div>
                   <div className="flex items-center justify-between mb-1">
                      <p className="text-sm font-medium text-muted-foreground">Overall Accuracy</p>
-                     <p className="text-sm font-semibold text-muted-foreground">75%</p> {/* Hardcoded value */}
+                     <p className="text-sm font-semibold text-muted-foreground">{userStats?.accuracy?.toFixed(1) || 0}%</p> {/* Hardcoded value */}
                   </div>
-                  <Progress value={75} className="h-2" aria-label="Overall Accuracy Progress"/>
+                  <Progress value={userStats?.accuracy || 0} className="h-2" aria-label="Overall Accuracy Progress"/>
                   {/* Consider adding a small note if this value isn't from the backend */}
                   {/* <p className="text-xs text-muted-foreground mt-1 italic">*Accuracy calculation based on mock data.</p> */}
                </div>

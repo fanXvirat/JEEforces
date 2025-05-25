@@ -93,11 +93,11 @@ export default function ProblemDetailPage() {
 
   // Determine border color based on selection and correctness check
   const getOptionBorderColor = (optionText: string) => {
-      if (selectedOption !== optionText) return 'border-gray-200 hover:border-gray-400'; // Default/hover
-      if (isCorrect === null) return 'border-blue-500 bg-blue-50'; // Selected, not checked
-      if (isCorrect === true) return 'border-green-500 bg-green-50'; // Correct
-      if (isCorrect === false) return 'border-red-500 bg-red-50'; // Incorrect
-      return 'border-gray-200'; // Fallback
+      if (selectedOption !== optionText) return 'border-border hover:border-muted-foreground/30'; // Default/hover
+      if (isCorrect === null) return 'border-ring bg-accent text-accent-foreground'; // Selected, not checked
+      if (isCorrect === true) return 'border-green-600 bg-green-900/20 text-green-600'; // Correct
+      if (isCorrect === false) return 'border-red-600 bg-red-900/20 text-red-600'; // Incorrect
+      return 'border-border'; // Fallback
   };
 
 
@@ -109,11 +109,11 @@ export default function ProblemDetailPage() {
         Back to Problems
       </Link>
 
-      <div className="bg-white p-6 md:p-8 rounded-lg shadow-md border border-gray-200 space-y-6">
+      <div className="bg-card text-card-foreground p-6 md:p-8 rounded-lg shadow-md border border-border space-y-6">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4 border-b">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold mb-2 text-gray-800">{problem.title}</h1>
+            <h1 className="text-2xl md:text-3xl font-bold mb-2 text-foreground">{problem.title}</h1>
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <DifficultyBadge difficulty={problem.difficulty} />
               <Badge variant="outline">{problem.subject}</Badge>
@@ -141,7 +141,7 @@ export default function ProblemDetailPage() {
             <img
               src={problem.imageUrl}
               alt={`Problem illustration: ${problem.title}`} // More descriptive alt text
-              className="block max-w-full md:max-w-2xl w-auto h-auto max-h-[500px] object-contain rounded-md bg-gray-50 p-1 border shadow-sm" // Styling for the image
+              className="block max-w-full md:max-w-2xl w-auto h-auto max-h-[500px] object-contain rounded-md bg-muted/40 p-1 border shadow-sm" // Styling for the image
               loading="lazy" // Lazy load images
             />
           </div>
@@ -150,13 +150,13 @@ export default function ProblemDetailPage() {
         {/* Problem Description */}
         {/* Added prose for better typography if description contains markdown/html */}
         <div
-            className="prose prose-sm sm:prose-base max-w-none text-gray-700"
+            className="prose prose-sm sm:prose-base max-w-none text-muted-foreground"
             dangerouslySetInnerHTML={{ __html: problem.description }}
         />
 
         {/* Options Section */}
         <div className="space-y-3 pt-4">
-           <h2 className="text-lg font-semibold text-gray-800">Options</h2>
+           <h2 className="text-lg font-semibold text-foreground">Options</h2>
           {problem.options.map((option, index) => (
             <div
               key={index}
@@ -168,7 +168,7 @@ export default function ProblemDetailPage() {
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleOptionSelect(option)} // Keyboard accessibility
             >
               <div className="flex items-start sm:items-center">
-                <span className="font-semibold mr-3 text-gray-700">{String.fromCharCode(65 + index)}.</span>
+                <span className="font-semibold mr-3 text-muted-foreground">{String.fromCharCode(65 + index)}.</span>
                 {/* Render option text - assuming it might be simple HTML */}
                 <span dangerouslySetInnerHTML={{ __html: option }} />
               </div>
@@ -205,15 +205,15 @@ export default function ProblemDetailPage() {
 
         {/* Solution Section (Conditional) */}
         {showSolution && (
-          <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md shadow-sm">
-            <h3 className="text-lg font-semibold mb-3 text-gray-800">Solution</h3>
+          <div className="mt-6 p-4 bg-muted/40 border border-border rounded-md shadow-sm">
+            <h3 className="text-lg font-semibold mb-3 text-foreground">Solution</h3>
             {/* Check if solution exists before rendering */}
             {problem.solution ? (
-                 <div className="prose prose-sm sm:prose-base max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: problem.solution }} />
+                 <div className="prose prose-sm sm:prose-base max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: problem.solution }} />
             ) : (
-                <p className="text-gray-600">No detailed solution provided.</p>
+                <p className="text-muted-foreground">No detailed solution provided.</p>
             )}
-             <p className="mt-4 pt-3 border-t text-sm font-medium text-gray-800">
+             <p className="mt-4 pt-3 border-t text-sm font-medium text-foreground">
               Correct Answer: <span className="font-bold" dangerouslySetInnerHTML={{ __html: problem.correctOption }} />
             </p>
           </div>
@@ -221,7 +221,7 @@ export default function ProblemDetailPage() {
 
         {/* Author Info (Optional) */}
         {problem.author?.username && (
-            <div className="text-xs text-gray-400 pt-4 text-right border-t">
+            <div className="text-xs text-muted-foreground pt-4 text-right border-t">
                 Problem added by: {problem.author.username}
             </div>
         )}

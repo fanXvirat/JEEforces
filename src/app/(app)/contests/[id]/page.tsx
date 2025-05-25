@@ -206,10 +206,10 @@ export default function ContestPage({ params }: ContestPageProps) {
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{contest.title}</h1>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{contest.title}</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
                         {startTime?.toLocaleString()} - {endTime?.toLocaleString()}
-                        {!isActive && isEnded && <span className="ml-2 font-semibold text-red-600">(Ended)</span>}
+                        {!isActive && isEnded && <span className="ml-2 font-semibold text-destructive">(Ended)</span>}
                         {isActive && <span className="ml-2 font-semibold text-green-600">(Active)</span>}
                     </p>
                 </div>
@@ -239,12 +239,12 @@ export default function ContestPage({ params }: ContestPageProps) {
 
             {/* Final Submission Notice */}
             {hasFinalSubmission && isActive && (
-                <div className="mb-6 p-3 bg-blue-100 text-blue-800 rounded-md text-sm border border-blue-200">
+                <div className="mb-6 p-3 bg-accent text-accent-foreground rounded-md text-sm border">
                     You have already made your final submission. Changes are no longer saved. View standings after the contest ends.
                 </div>
             )}
              {hasFinalSubmission && isEnded && (
-                <div className="mb-6 p-3 bg-green-100 text-green-800 rounded-md text-sm border border-green-200">
+                <div className="mb-6 p-3 bg-green-500/10 text-green-600 rounded-md text-sm border border-green-500/20">
                     Your final submission was recorded for this contest.
                 </div>
             )}
@@ -253,7 +253,7 @@ export default function ContestPage({ params }: ContestPageProps) {
             {/* Tabs for Subjects */}
             {availableSubjects.length > 0 ? (
                 <Tabs defaultValue={availableSubjects[0]} className="w-full">
-                    <TabsList className={` w-full grid-cols-${availableSubjects.length} mb-8`}>
+                    <TabsList className={` w-full grid-cols-${availableSubjects.length} mb-8 bg-muted`}>
                         {availableSubjects.includes('physics') && <TabsTrigger value="physics">Physics</TabsTrigger>}
                         {availableSubjects.includes('chemistry') && <TabsTrigger value="chemistry">Chemistry</TabsTrigger>}
                         {availableSubjects.includes('mathematics') && <TabsTrigger value="mathematics">Mathematics</TabsTrigger>}
@@ -277,7 +277,7 @@ export default function ContestPage({ params }: ContestPageProps) {
                                         <CardContent className="flex-grow space-y-4"> {/* Added flex-grow and space-y */}
                                             {/* Problem Image */}
                                             {problem.imageUrl && (
-                                                <div className="mb-4 border rounded-md p-1 bg-gray-50 flex justify-center">
+                                                <div className="mb-4 border rounded-md bg-muted/40 flex justify-center">
                                                     <Image // Using Next.js Image
                                                         src={problem.imageUrl}
                                                         alt={`Illustration for ${problem.title}`}
@@ -291,7 +291,7 @@ export default function ContestPage({ params }: ContestPageProps) {
 
                                             {/* Problem Description */}
                                             {/* Use prose for potential markdown/html, limit lines */}
-                                            <div className="prose prose-sm max-w-none text-gray-700 line-clamp-4">
+                                            <div className="prose prose-sm max-w-none text-muted-foreground">
                                                 <p>{problem.description}</p> {/* Render description safely */}
                                             </div>
 
@@ -301,12 +301,12 @@ export default function ContestPage({ params }: ContestPageProps) {
                                                     <Button
                                                         key={optIndex}
                                                         variant={submissions[problem._id] === option ? 'default' : 'outline'}
-                                                        className="w-full text-left justify-start h-auto py-2 whitespace-normal" // Allow text wrapping
+                                                        className="w-full text-left justify-start h-auto py-2 whitespace-normal border" // Allow text wrapping
                                                         onClick={() => handleOptionSelect(problem._id, option)}
                                                         disabled={!isActive || hasFinalSubmission} // Disable options based on state
                                                         aria-pressed={submissions[problem._id] === option}
                                                     >
-                                                        <span className="font-medium mr-2">{String.fromCharCode(65 + optIndex)}.</span>
+                                                        <span className="font-medium mr-2 text-foreground">{String.fromCharCode(65 + optIndex)}.</span>
                                                         {/* Render option text safely */}
                                                         <span>{option}</span>
                                                     </Button>
@@ -320,7 +320,7 @@ export default function ContestPage({ params }: ContestPageProps) {
                     ))}
                 </Tabs>
              ) : (
-                  <div className="text-center text-gray-500 mt-10">No problems found for this contest.</div>
+                  <div className="text-center text-muted-foreground mt-10">No problems found for this contest.</div>
              )}
         </div>
     );

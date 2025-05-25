@@ -54,10 +54,10 @@ export default function SignInForm() {
    };
 
    return (
-      <div className='flex justify-center items-center min-h-screen bg-gray-100'>
-         <div className='w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md'>
+      <div className='flex justify-center items-center min-h-screen bg-background'>
+         <div className='w-full max-w-md p-8 space-y-8 bg-card rounded-lg shadow-md border border-border'>
             <div className='text-center'>
-               <h1 className='text-4xl font-extrabold tracking-tight lg:text-5xl mb-6'>
+               <h1 className='text-4xl font-extrabold tracking-tight lg:text-5xl mb-6 text-foreground'>
                   Welcome Back to JEEForces
                </h1>
                <p className='mb-4'>
@@ -74,8 +74,8 @@ export default function SignInForm() {
                      control={form.control}
                      render={({ field }) => (
                         <FormItem>
-                           <FormLabel>Email</FormLabel>
-                           <Input {...field} />
+                           <FormLabel className="text-foreground">Email</FormLabel>
+                           <Input {...field} className="bg-background text-foreground border-border"/>
                            <FormMessage />
                         </FormItem>
                      )}
@@ -85,23 +85,23 @@ export default function SignInForm() {
                      control={form.control}
                      render={({ field }) => (
                         <FormItem>
-                           <FormLabel>Password</FormLabel>
-                           <Input type='password' {...field} />
+                           <FormLabel className="text-foreground">Password</FormLabel>
+                           <Input type='password' {...field} className="bg-background text-foreground border-border"/>
                            <FormMessage />
                         </FormItem>
                      )}
                   />
-                  <Button className='w-full' type='submit'>
+                  <Button className='w-full bg-primary text-primary-foreground hover:bg-primary/90' type='submit'>
                      Sign In
                   </Button>
                </form>
             </Form>
             <div className='text-center mt-4'>
-               <p>
+               <p className="text-muted-foreground">
                   Not a member yet?{' '}
                   <Link
                      href='/sign-up'
-                     className='text-blue-600 hover:text-blue-800'
+                     className='text-primary hover:text-primary/80'
                   >
                      Sign up
                   </Link>

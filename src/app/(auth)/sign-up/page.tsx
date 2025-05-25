@@ -81,13 +81,13 @@ function page() {
    };
 
    return (
-      <div className='flex justify-center items-center min-h-screen bg-gray-100'>
-         <div className='w-full max-w-md p-8 space-y-0 bg-white rounded-lg shadow-md'>
+      <div className='flex justify-center items-center min-h-screen bg-background'>
+         <div className='w-full max-w-md p-8 space-y-0 bg-card rounded-lg shadow-md border border-border'>
             <div className='text-center'>
-               <h1 className='text-4xl font-extrabold tracking-tight lg:text-5xl mb-6'>
+               <h1 className='text-4xl font-extrabold tracking-tight lg:text-5xl mb-6 text-foreground'>
                   Join AMA
                </h1>
-               <p className='mb-4'>Sign up to start your JEEForces adventure</p>
+               <p className='mb-4 text-muted-foreground'>Sign up to start your JEEForces adventure</p>
             </div>
             <Form {...form}>
                <form
@@ -99,11 +99,12 @@ function page() {
                      name='username'
                      render={({ field }) => (
                         <FormItem>
-                           <FormLabel>Username</FormLabel>
+                           <FormLabel className="text-foreground">Username</FormLabel>
                            <FormControl>
                               <Input
                                  placeholder='username'
                                  {...field}
+                                 className="bg-background text-foreground border-border"
                                  onChange={(e) => {
                                     field.onChange(e);
                                     debounced(e.target.value);
@@ -136,13 +137,10 @@ function page() {
                      name='email'
                      render={({ field }) => (
                         <FormItem>
-                           <FormLabel>Email</FormLabel>
+                           <FormLabel className="text-foreground">Email</FormLabel>
                            <FormControl>
-                              <Input placeholder='email' {...field} />
+                              <Input placeholder='email' {...field} className="bg-background text-foreground border-border" />
                            </FormControl>
-                           {/* <FormDescription>
-                              This is your email.
-                           </FormDescription> */}
                            <FormMessage />
                         </FormItem>
                      )}
@@ -152,22 +150,20 @@ function page() {
                      name='password'
                      render={({ field }) => (
                         <FormItem>
-                           <FormLabel>Password</FormLabel>
+                           <FormLabel className="text-foreground">Password</FormLabel>
                            <FormControl>
                               <Input
                                  type='password'
                                  placeholder='password'
                                  {...field}
+                                 className="bg-background text-foreground border-border"
                               />
                            </FormControl>
-                           {/* <FormDescription>
-                              This is your password.
-                           </FormDescription> */}
                            <FormMessage />
                         </FormItem>
                      )}
                   />
-                  <Button type='submit' disabled={isSubmitting}>
+                  <Button type='submit' disabled={isSubmitting} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
                      {isSubmitting ? (
                         <>
                            <Loader2 className='mr-2 h-4 w-4 animate-spin' />{' '}
@@ -180,11 +176,11 @@ function page() {
                </form>
             </Form>
             <div className='text-center mt-4'>
-               <p>
+               <p className="text-muted-foreground">
                   Already a member?{' '}
                   <Link
                      href='/sign-in'
-                     className='text-blue-600 hover:text-blue-800'
+                     className='text-primary hover:text-primary/80'
                   >
                      Sign in
                   </Link>

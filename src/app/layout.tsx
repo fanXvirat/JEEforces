@@ -9,6 +9,7 @@ import Navbar from "@/components/ui/Navbar";
 import { Sidebar } from "@/components/Sidebar"; 
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider"; 
+import QueryProvider from "@/context/query-provider";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -24,7 +25,6 @@ export const metadata: Metadata = {
   title: "JEE Forces",
   description: "Master JEE with Peer Power - India's largest community for JEE preparation",
 };
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -44,7 +44,8 @@ export default function RootLayout({
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
-        >
+        > 
+        <QueryProvider>
           <AuthProvider>
             <div className="flex min-h-screen">
               <div className="flex flex-1 flex-col">
@@ -57,6 +58,7 @@ export default function RootLayout({
             </div>
             <Toaster position="top-center" richColors />
           </AuthProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

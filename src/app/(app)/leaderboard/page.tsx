@@ -1,19 +1,18 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, UserSearch, BarChart } from 'lucide-react'; // Added icons
+import { Loader2, UserSearch } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { getTitleColor, cn } from '@/lib/utils'; // Import cn
+import { getTitleColor, cn } from '@/lib/utils';
 import {
     Table,
     TableBody,
-    TableCaption,
     TableCell,
     TableHead,
     TableHeader,
@@ -26,8 +25,9 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
-import { toast } from 'sonner'; // Added for potential error feedback
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
+import { useInfiniteQuery } from '@tanstack/react-query'; // Import useInfiniteQuery
 
 interface LeaderboardUser {
     _id: string;
@@ -37,10 +37,10 @@ interface LeaderboardUser {
     title: string;
     institute?: string;
     problemsSolved: number;
-    accuracy: number; // Assuming accuracy is a number between 0 and 1
+    accuracy: number;
 }
 
-// Helper function for initials (if not globally available)
+// Helper function for initials
 const getInitials = (name: string = '') => {
     return name
         .split(' ')
@@ -50,103 +50,98 @@ const getInitials = (name: string = '') => {
         .toUpperCase() || '?';
 };
 
-const DEBOUNCE_DELAY = 300; // Delay for search input debounce
+const DEBOUNCE_DELAY = 500; // Increased debounce delay for better UX on filters
 
 export default function LeaderboardPage() {
-    const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false); // Separate state for loading more
-    const [page, setPage] = useState(1);
-    const [hasMore, setHasMore] = useState(true);
     const [filters, setFilters] = useState({
         search: '',
         ratingRange: [0, 3000] as [number, number],
     });
-    const [appliedFilters, setAppliedFilters] = useState(filters); // Store filters used for the current data
+    // State to hold the filters that are actually applied to the query
+    const [debouncedFilters, setDebouncedFilters] = useState(filters);
 
-    // Debounced filter application (Optional but recommended UX improvement)
-    // You would need a debounce utility or useEffect with setTimeout for this
-    /*
+    // Debounce effect for filters
     useEffect(() => {
-      const handler = setTimeout(() => {
-        setPage(1); // Reset page when filters change
-        setAppliedFilters(filters);
-      }, DEBOUNCE_DELAY);
-      return () => clearTimeout(handler);
-    }, [filters]); // Trigger effect when filters change
-    */
-    // --- Using immediate filter application as per original code ---
-     useEffect(() => {
-       // Reset page and apply filters immediately when they change in the UI
-       setPage(1);
-       setAppliedFilters(filters);
-     }, [filters]);
-    // --- End immediate filter application ---
+        const handler = setTimeout(() => {
+            // Only update debouncedFilters if they are different from current filters
+            if (JSON.stringify(debouncedFilters) !== JSON.stringify(filters)) {
+                setDebouncedFilters(filters);
+            }
+        }, DEBOUNCE_DELAY);
 
-    const loadData = useCallback(async (reset = false) => {
-        if (reset) {
-            setLoading(true); // Full loading state only on reset
-            setLeaderboard([]); // Clear existing data on reset
-        } else {
-            setLoadingMore(true); // Use loadingMore state for subsequent pages
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [filters, debouncedFilters]); // Re-run when filters change, or debouncedFilters are updated
+
+    // Fetching function for useInfiniteQuery
+    const fetchLeaderboard = useCallback(async ({ pageParam = 1 }) => {
+        const params = new URLSearchParams({
+            page: pageParam.toString(),
+            limit: '15',
+            search: debouncedFilters.search,
+            minRating: debouncedFilters.ratingRange[0].toString(),
+            maxRating: debouncedFilters.ratingRange[1].toString(),
+        });
+
+        const response = await fetch(`/api/leaderboard?${params}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const { success, leaderboard: data, pagination } = await response.json();
+
+        if (!success || !data) {
+            throw new Error("API did not return successful data.");
         }
 
-        try {
-            const currentFilters = reset ? filters : appliedFilters; // Use UI filters for reset, applied filters otherwise
-            const currentPage = reset ? 1 : page;
+        return { data, pagination, nextPage: pagination.page < pagination.totalPages ? pagination.page + 1 : undefined };
+    }, [debouncedFilters]); // Depend on debouncedFilters
 
-            const params = new URLSearchParams({
-                page: currentPage.toString(),
-                limit: '15', // Increased limit slightly
-                search: currentFilters.search,
-                minRating: currentFilters.ratingRange[0].toString(),
-                maxRating: currentFilters.ratingRange[1].toString(),
+    const {
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading, // Initial loading state
+        isError,
+        error,
+        refetch, // Function to manually refetch when filters change or for retry
+    } = useInfiniteQuery({
+        queryKey: ['leaderboard', debouncedFilters], // Query key includes debounced filters
+        queryFn: fetchLeaderboard,
+        getNextPageParam: (lastPage) => lastPage.nextPage,
+        initialPageParam: 1,
+        staleTime: 5 * 60 * 1000, // Data is fresh for 5 minutes (matches backend cache TTL)
+        gcTime: 10 * 60 * 1000, // Cached data garbage collected after 10 minutes of inactivity
+        // Important: When debouncedFilters change, useInfiniteQuery will automatically
+        // invalidate and refetch from page 1, effectively handling filter application.
+    });
+
+    // Flatten the data from all pages
+    const leaderboard = data?.pages?.flatMap(page => page.data) || [];
+
+    // Handle errors globally with toast
+    useEffect(() => {
+        if (isError) {
+            console.error('Leaderboard fetch error:', error);
+            toast.error("Failed to load leaderboard. Please try again later.", {
+                description: error instanceof Error ? error.message : "An unknown error occurred.",
             });
-
-            const response = await fetch(`/api/leaderboard?${params}`);
-            if (!response.ok) {
-                 throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const { success, leaderboard: data, pagination } = await response.json();
-
-            if (success && data) {
-                setLeaderboard(prev => (reset ? data : [...prev, ...data]));
-                setHasMore(pagination?.page < pagination?.totalPages);
-            } else {
-                // Handle cases where success is false or data is missing
-                setHasMore(false); // Assume no more data if API indicates failure or missing data
-                if (!reset) setPage(prev => Math.max(1, prev - 1)); // Roll back page state if load more failed
-                toast.error("Could not load leaderboard data.");
-            }
-        } catch (error) {
-            console.error('Failed to load leaderboard:', error);
-            toast.error("Failed to load leaderboard. Please try again later.");
-            if (!reset) setPage(prev => Math.max(1, prev - 1)); // Roll back page state on error
-            setHasMore(false); // Assume no more data on error
-        } finally {
-             setLoading(false);
-             setLoadingMore(false);
         }
-    }, [page, appliedFilters, filters]); // Include filters here if using immediate update
+    }, [isError, error]);
 
-    // Initial load and load on applied filter change
-    useEffect(() => {
-        loadData(true); // Pass true to reset and use appliedFilters
-    }, [appliedFilters]); // Depend on appliedFilters
-
-    // Load more data when page changes (and not on initial mount/filter change)
-    useEffect(() => {
-         // Only trigger loadData if page > 1 (to avoid double load on mount/filter change)
-         // and if not currently loading the initial data
-        if (page > 1 && !loading) {
-             loadData(false); // Load more, don't reset
-        }
-    }, [page, loading]); // Depend on page and loading state
+    // Manually trigger a refresh when filter values change significantly (debounced)
+    // useInfiniteQuery already handles this via `queryKey` dependency,
+    // so this useEffect might not be strictly necessary, but helpful for explicit refresh logic.
+    // useEffect(() => {
+    //    if (!isLoading) { // Avoid refetching immediately on initial load
+    //        refetch();
+    //    }
+    // }, [debouncedFilters, refetch, isLoading]);
 
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-         setFilters(prev => ({ ...prev, search: e.target.value }));
-         // Debounce handled by useEffect above (if implemented)
+        setFilters(prev => ({ ...prev, search: e.target.value }));
     };
 
     const handleSliderChange = (value: number[]) => {
@@ -154,8 +149,10 @@ export default function LeaderboardPage() {
             ...prev,
             ratingRange: value as [number, number],
         }));
-        // Debounce handled by useEffect above (if implemented)
     };
+
+    // Determine total count from the last page's pagination if available
+    const totalCount = data?.pages[0]?.pagination?.totalCount;
 
     return (
         <div className="container mx-auto px-4 py-8 md:py-12">
@@ -180,9 +177,8 @@ export default function LeaderboardPage() {
                             <Input
                                 id="search"
                                 placeholder="Search by username or institute..."
-                                value={filters.search}
+                                value={filters.search} // Controlled by immediate filter state
                                 onChange={handleSearchChange}
-                                // Consider adding a Search icon inside the input if desired
                             />
                         </div>
 
@@ -192,11 +188,11 @@ export default function LeaderboardPage() {
                             <Slider
                                 id="rating-slider"
                                 min={0}
-                                max={3500} // Slightly increased max range
+                                max={3500}
                                 step={50}
-                                value={filters.ratingRange}
-                                onValueChange={handleSliderChange} // Use the specific handler
-                                className="py-2" // Add padding for easier thumb interaction
+                                value={filters.ratingRange} // Controlled by immediate filter state
+                                onValueChange={handleSliderChange}
+                                className="py-2"
                             />
                             <div className="flex justify-between text-xs text-muted-foreground">
                                 <span>{filters.ratingRange[0]}</span>
@@ -210,8 +206,6 @@ export default function LeaderboardPage() {
             {/* Leaderboard Table */}
             <div className="border rounded-lg overflow-hidden">
                 <Table>
-                    {/* Optional: Add TableCaption if needed */}
-                    {/* <TableCaption>A list of top users on JEEForces.</TableCaption> */}
                     <TableHeader>
                         <TableRow>
                             <TableHead className="w-[60px] text-center">Rank</TableHead>
@@ -222,8 +216,7 @@ export default function LeaderboardPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {loading && leaderboard.length === 0 ? (
-                            // Skeleton Loading State
+                        {isLoading ? (
                             Array.from({ length: 10 }).map((_, i) => (
                                 <TableRow key={`skel-${i}`}>
                                     <TableCell className="text-center tabular-nums">
@@ -250,11 +243,11 @@ export default function LeaderboardPage() {
                                 </TableRow>
                             ))
                         ) : leaderboard.length > 0 ? (
-                            // Data Rows
                             leaderboard.map((user, index) => (
                                 <TableRow key={user._id}>
                                     <TableCell className="text-center font-medium tabular-nums text-muted-foreground">
-                                        #{index + 1 + (page - 1) * 15} {/* Calculate rank based on page */}
+                                        {/* Calculate rank based on page structure from useInfiniteQuery */}
+                                        #{index + 1}
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-3">
@@ -277,7 +270,7 @@ export default function LeaderboardPage() {
                                     </TableCell>
                                     <TableCell className="text-center">
                                         <Badge variant="secondary" className="font-semibold">
-                                            {Math.round(user.rating)} {/* Use Math.round */}
+                                            {Math.round(user.rating)}
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="hidden sm:table-cell text-xs text-muted-foreground text-center">
@@ -287,7 +280,6 @@ export default function LeaderboardPage() {
                                 </TableRow>
                             ))
                         ) : (
-                             // Empty State (when not loading)
                              <TableRow>
                                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                                      No users found matching your criteria.
@@ -295,7 +287,7 @@ export default function LeaderboardPage() {
                              </TableRow>
                         )}
                          {/* Row for Loading More Spinner */}
-                         {loadingMore && (
+                         {isFetchingNextPage && (
                              <TableRow>
                                  <TableCell colSpan={5} className="py-4 text-center">
                                      <Loader2 className="h-5 w-5 animate-spin text-primary inline-block" />
@@ -307,17 +299,17 @@ export default function LeaderboardPage() {
             </div>
 
             {/* Load More Button */}
-            {hasMore && !loading && !loadingMore && (
+            {hasNextPage && !isLoading && ( // isLoading covers initial load, !isFetchingNextPage covers subsequent
                 <div className="mt-8 flex justify-center">
                     <Button
-                        onClick={() => setPage(prev => prev + 1)}
+                        onClick={() => fetchNextPage()}
                         variant="outline"
-                        disabled={loadingMore} // Disable while loading more
+                        disabled={isFetchingNextPage}
                     >
-                        {loadingMore ? (
+                        {isFetchingNextPage ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Loading...
+                                Loading More...
                             </>
                         ) : (
                             'Load More'
