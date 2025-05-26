@@ -1,9 +1,10 @@
+// components/ui/Navbar.tsx
 'use client';
 
 import React from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { User as NextAuthUser } from 'next-auth'; // Renamed to avoid conflict with Lucide icon
+import { User as NextAuthUser } from 'next-auth';
 import { Button } from '@/components/ui/button';
 import {
     Sheet,
@@ -11,7 +12,7 @@ import {
     SheetHeader,
     SheetTitle,
     SheetTrigger,
-    SheetClose, // Added SheetClose
+    SheetClose,
 } from '@/components/ui/sheet';
 import {
     DropdownMenu,
@@ -22,23 +23,21 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Menu, LogOut, User as UserIcon, LayoutDashboard } from 'lucide-react'; // Imported specific icons
-import { usePathname } from 'next/navigation'; 
+import { Menu, LogOut, User as UserIcon, LayoutDashboard } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { ThemeToggle } from '../theme-toggle';
+import { SidebarContent } from '@/components/SidebarContent'; // Import the new SidebarContent
 
-// Helper function for initials (if not globally available)
 const getInitials = (name: string = '') => {
-    // Handle potential email fallback or empty name
     const validName = name?.includes('@') ? name.split('@')[0] : name;
     return validName
         ?.split(' ')
         .map((n) => n[0])
         .slice(0, 2)
         .join('')
-        .toUpperCase() || '?'; // Default fallback
+        .toUpperCase() || '?';
 };
 
-// Define navigation links
 const navLinks = [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/contests', label: 'Contests' },
@@ -47,11 +46,10 @@ const navLinks = [
     { href: '/discussions', label: 'Discussions' },
 ];
 
-export default function Navbar() { // Changed component name to follow conventions
+export default function Navbar() {
     const { data: session } = useSession();
-    // Ensure user type includes potential custom fields like 'username' and 'avatar'
     const user = session?.user as NextAuthUser & { username?: string; avatar?: string };
-    const pathname = usePathname(); // Get current path
+    const pathname = usePathname();
 
     return (
         <nav className='sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'>
@@ -69,8 +67,8 @@ export default function Navbar() { // Changed component name to follow conventio
                                 variant="ghost"
                                 className={`text-sm font-medium transition-colors ${
                                     pathname === link.href
-                                        ? 'text-primary' // Active style
-                                        : 'text-muted-foreground hover:text-primary' // Default style
+                                        ? 'text-primary'
+                                        : 'text-muted-foreground hover:text-primary'
                                 }`}
                             >
                                 {link.label}
@@ -88,11 +86,11 @@ export default function Navbar() { // Changed component name to follow conventio
                                 <Button
                                     variant='ghost'
                                     className='relative h-9 w-9 rounded-full focus-visible:ring-0 focus-visible:ring-offset-0'
-                                    aria-label="User menu" // Accessibility
+                                    aria-label="User menu"
                                 >
                                     <Avatar className='h-9 w-9'>
                                         <AvatarImage
-                                            src={user?.avatar || undefined} // Pass undefined if null/empty
+                                            src={user?.avatar || undefined}
                                             alt={user?.username || user?.name || 'User Avatar'}
                                         />
                                         <AvatarFallback>
@@ -120,7 +118,7 @@ export default function Navbar() { // Changed component name to follow conventio
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
-                                     <Link href='/dashboard/settings'> {/* Assuming settings is under dashboard */}
+                                     <Link href='/dashboard/settings'>
                                         <UserIcon className='mr-2 h-4 w-4' />
                                         <span>Profile Settings</span>
                                     </Link>
@@ -148,7 +146,8 @@ export default function Navbar() { // Changed component name to follow conventio
                                     <span className='sr-only'>Toggle Menu</span>
                                 </Button>
                             </SheetTrigger>
-                            <SheetContent side='left' className='w-full max-w-xs sm:max-w-sm'>
+                            {/* --- MODIFIED: Added flex-col and scrollable content for SidebarContent --- */}
+                            <SheetContent side='left' className='w-full max-w-xs sm:max-w-sm flex flex-col'>
                                 <SheetHeader className="mb-6">
                                     <SheetTitle>
                                         <Link href='/' className='text-xl font-bold text-primary'>
@@ -156,13 +155,14 @@ export default function Navbar() { // Changed component name to follow conventio
                                         </Link>
                                     </SheetTitle>
                                 </SheetHeader>
-                                <div className='flex flex-col space-y-3'>
+                                {/* Main Nav Links */}
+                                <div className='flex flex-col space-y-3 pb-6 border-b'>
                                     {navLinks.map((link) => (
                                         <SheetClose asChild key={link.href}>
                                         <Link href={link.href} className="w-full">
                                             <Button
                                                 variant="ghost"
-                                                className={`w-full justify-start text-base ${
+                                                className={`w-full justify-start text-base ${ // Using text-base for better mobile readability
                                                     pathname === link.href
                                                         ? 'text-primary font-semibold bg-muted'
                                                         : 'text-muted-foreground hover:text-primary'
@@ -174,18 +174,10 @@ export default function Navbar() { // Changed component name to follow conventio
                                     </SheetClose>
                                     ))}
                                 </div>
-                                {/* Optional: Add Login/Logout in mobile sheet footer */}
-                                {/* <div className="mt-auto pt-6 border-t">
-                                    {session ? (
-                                        <Button variant="destructive" className="w-full" onClick={() => signOut()}>Logout</Button>
-                                    ) : (
-                                         <SheetClose asChild>
-                                            <Link href="/sign-in" className="w-full">
-                                                <Button className="w-full">Login</Button>
-                                            </Link>
-                                        </SheetClose>
-                                    )}
-                                </div> */}
+                                {/* Sidebar Content for Mobile - now scrollable */}
+                                <div className="flex-1 overflow-y-auto pt-6">
+                                  <SidebarContent /> {/* Render SidebarContent here, no `isCollapsed` needed for mobile sheet */}
+                                </div>
                             </SheetContent>
                         </Sheet>
                     </div>

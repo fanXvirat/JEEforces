@@ -3,10 +3,10 @@ import { useSession } from 'next-auth/react';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import axios, { AxiosError } from 'axios';
-import { Loader2, RefreshCcw, Trophy, PlusCircle, Users, BarChartHorizontal, LogIn, CheckCheck, CalendarClock, Eye, EyeOff } from 'lucide-react'; // Added Eye, EyeOff icons
+import { Loader2, RefreshCcw, Trophy, PlusCircle, Users, BarChartHorizontal, LogIn, CheckCheck, CalendarClock, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-    Card, 
+    Card,
     CardHeader,
     CardTitle,
     CardDescription,
@@ -85,7 +85,7 @@ export default function ContestListPage() {
     const [isRegistering, setIsRegistering] = useState<string | null>(null);
     const [isUpdatingRatings, setIsUpdatingRatings] = useState<string | null>(null);
     const [isTogglingPublish, setIsTogglingPublish] = useState<string | null>(null);
-    const [isReleasingProblems, setIsReleasingProblems] = useState<string | null>(null); // RENAMED state
+    const [isReleasingProblems, setIsReleasingProblems] = useState<string | null>(null);
 
     const user = session?.user as SessionUser | undefined;
 
@@ -174,19 +174,13 @@ export default function ContestListPage() {
         }
     };
 
-    // NEW: Handler for releasing problems after contest ends
     const handleReleaseProblems = async (contestId: string) => {
         if (!user?._id || user.role !== 'admin' || isReleasingProblems) return;
 
         setIsReleasingProblems(contestId);
         try {
-            // Call the new API endpoint
             const response = await axios.patch(`/api/contests/${contestId}/release-problems`);
             toast.success(response.data.message);
-            // Optionally, re-fetch contests if their state needs to reflect
-            // that problems have been released (e.g., if Contest model tracked this)
-            // Or just rely on toast and the fact that problem list will now show them.
-            // fetchContests(false); // Can trigger a soft refresh if needed
         } catch (error) {
             console.error("Release problems error:", error);
             const axiosError = error as AxiosError<{ error: string }>;
@@ -258,7 +252,7 @@ export default function ContestListPage() {
                     <Skeleton className="h-10 w-10 rounded-full" />
                  </div>
                  {session?.user?.role === 'admin' && <Skeleton className="h-10 w-40 mb-8 rounded" />}
-                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"> {/* Explicitly set grid-cols-1 for mobile, sm:grid-cols-2 for smaller tablets */}
                     {[...Array(6)].map((_, i) => <ContestCardSkeleton key={i} />)}
                 </div>
             </div>
@@ -285,7 +279,9 @@ export default function ContestListPage() {
                         <Link href="/contests/create">
                             <Button variant="outline">
                                 <PlusCircle className="mr-2 h-4 w-4" />
-                                Create Contest
+                                {/* Added responsive text for Create Contest button */}
+                                <span className="hidden sm:inline">Create Contest</span>
+                                <span className="inline sm:hidden">New</span>
                             </Button>
                         </Link>
                     )}
@@ -308,19 +304,20 @@ export default function ContestListPage() {
                     {user?.role === 'admin' && <p className="mt-2">You can create a new one!</p>}
                 </div>
             ) : (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"> {/* Explicitly setting grid-cols-1 for mobile, sm:grid-cols-2 for smaller tablets */}
                     {contests.map((contest) => {
                         const { status, variant, className: badgeClassName, text: statusText } = getContestStatus(contest.startTime, contest.endTime);
                         const isEnded = status === 'ended';
                         const toggleLoading = isTogglingPublish === contest._id;
-                        const releaseProblemsLoading = isReleasingProblems === contest._id; // NEW loading state variable
+                        const releaseProblemsLoading = isReleasingProblems === contest._id;
 
                         return (
                             <Card key={contest._id} className="hover:shadow-md transition-shadow duration-200 flex flex-col justify-between border">
                                 <div>
                                     <CardHeader className="pb-3">
                                         <div className="flex justify-between items-start gap-2 mb-1">
-                                            <CardTitle className="text-lg leading-tight">{contest.title}</CardTitle>
+                                            {/* Adjusted title size for smaller screens */}
+                                            <CardTitle className="text-base sm:text-lg leading-tight">{contest.title}</CardTitle>
                                             <Badge variant={variant} className={cn("text-xs whitespace-nowrap mt-0.5", badgeClassName)}>
                                                 {statusText}
                                             </Badge>
@@ -342,7 +339,9 @@ export default function ContestListPage() {
                                                 <div className="flex items-center space-x-2">
                                                     <Label htmlFor={`publish-toggle-${contest._id}`} className="flex items-center text-xs gap-1 cursor-pointer">
                                                         {contest.ispublished ? <Eye className="h-3 w-3 text-green-600" /> : <EyeOff className="h-3 w-3 text-red-600" />}
-                                                        <span>{contest.ispublished ? 'Published' : 'Draft'}</span>
+                                                        {/* Added responsive text for Publish/Draft status */}
+                                                        <span className="hidden xs:inline">{contest.ispublished ? 'Published' : 'Draft'}</span>
+                                                        <span className="inline xs:hidden">{contest.ispublished ? 'Pub' : 'Drf'}</span>
                                                     </Label>
                                                     <Switch
                                                         id={`publish-toggle-${contest._id}`}
@@ -372,18 +371,16 @@ export default function ContestListPage() {
                                                 {isUpdatingRatings === contest._id && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
                                                 Update Ratings
                                             </Button>
-                                            {/* NEW: Release Problems Globally Button */}
                                             <Button
-                                                variant="secondary" // Use a distinct variant
+                                                variant="secondary"
                                                 size="sm"
                                                 className="w-full text-xs"
-                                                onClick={() => handleReleaseProblems(contest._id)} // Call the new handler
-                                                disabled={releaseProblemsLoading} // Use the new loading state
+                                                onClick={() => handleReleaseProblems(contest._id)}
+                                                disabled={releaseProblemsLoading}
                                             >
                                                 {releaseProblemsLoading && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
                                                 Release Problems Globally
                                             </Button>
-                                            {/* END NEW */}
                                         </>
                                     )}
                                 </CardFooter>

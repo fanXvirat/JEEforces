@@ -6,21 +6,21 @@ import {
   Card,
   CardHeader,
   CardTitle,
-  CardDescription, // Added for author/date line
+  CardDescription,
   CardContent,
   CardFooter,
 } from '@/components/ui/card';
-import { Loader2, ArrowRight, Rocket, Users, Megaphone, Trophy, BookOpenCheck, Pin } from 'lucide-react'; // Added icons
+import { Loader2, ArrowRight, Rocket, Users, Megaphone, Trophy, BookOpenCheck, Pin } from 'lucide-react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { VoteButtons } from '@/components/Upvote';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Added Avatar
+import { Badge } from '@/components/ui/badge'; // Badge is imported but not used in the provided snippet.
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from 'next/link';
 import { getTitleColor } from '@/lib/utils';
-import { Balancer } from 'react-wrap-balancer'; // Import Balancer
+import { Balancer } from 'react-wrap-balancer';
 
 interface Discussion {
   _id: string;
@@ -29,7 +29,7 @@ interface Discussion {
   author: {
     username: string;
     title: string;
-    avatar?: string; // Make avatar optional if not always present
+    avatar?: string;
   };
   upvotes: string[];
   downvotes: string[];
@@ -47,7 +47,6 @@ const getInitials = (name: string = '') => {
     .join('');
 };
 
-
 export default function HomePage() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -61,7 +60,7 @@ export default function HomePage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true); // Ensure loading is true at the start
+      setLoading(true);
       try {
         const [featuredRes, contestsRes, problemsRes, usersRes] = await Promise.all([
           axios.get('/api/discussions?featured=true'),
@@ -70,9 +69,9 @@ export default function HomePage() {
           axios.get('/api/user/count'),
         ]);
 
-        setFeaturedDiscussions(featuredRes.data.discussions || []); // Default to empty array
+        setFeaturedDiscussions(featuredRes.data.discussions || []);
         setStats({
-          contests: contestsRes.data?.length ?? 0, // Use optional chaining and nullish coalescing
+          contests: contestsRes.data?.length ?? 0,
           problems: problemsRes.data?.length ?? 0,
           users: usersRes.data?.count ?? 0,
         });
@@ -88,7 +87,6 @@ export default function HomePage() {
 
   const toggleFeature = async (id: string) => {
     try {
-      // Optimistic UI update
       const originalDiscussions = [...featuredDiscussions];
       setFeaturedDiscussions(prev =>
         prev.map(d => d._id === id ? { ...d, isFeatured: !d.isFeatured } : d)
@@ -97,20 +95,17 @@ export default function HomePage() {
       await axios.put(`/api/discussions/${id}/toggle-feature`);
       toast.success('Discussion feature status updated successfully!');
     } catch (error) {
-       // Revert UI on error
-      // setFeaturedDiscussions(originalDiscussions); // Uncomment if you revert optimistic updates
       console.error('Failed to update feature status:', error);
       toast.error('Failed to update feature status. Please try again.');
-       // Revert optimistic update manually if needed
       setFeaturedDiscussions(prev =>
-        prev.map(d => d._id === id ? { ...d, isFeatured: !d.isFeatured } : d) // Revert back
+        prev.map(d => d._id === id ? { ...d, isFeatured: !d.isFeatured } : d)
       );
     }
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[calc(100vh-150px)]"> {/* Adjusted height */}
+      <div className="flex justify-center items-center min-h-[calc(100vh-150px)]">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
@@ -120,9 +115,7 @@ export default function HomePage() {
     <div className="container mx-auto px-4 py-8 md:py-12">
       {/* Hero Section */}
       <section className="text-center py-20 md:py-28 mb-16 md:mb-24 bg-gradient-to-br from-primary via-primary/80 to-secondary rounded-2xl text-primary-foreground shadow-lg overflow-hidden relative">
-         {/* Optional: Add subtle background elements if desired */}
-         {/* <div className="absolute inset-0 bg-[url('/path/to/your/subtle-pattern.svg')] opacity-10"></div> */}
-         <div className="relative z-10">
+         <div className="relative z-10 px-4"> {/* Added px-4 for smaller screens */}
             <h1 className="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight">
                <Balancer>Master JEE with Peer Power</Balancer>
             </h1>
@@ -150,16 +143,16 @@ export default function HomePage() {
 
       {/* Featured Discussions Grid */}
       <section className="mb-16 md:mb-24">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 px-4 sm:px-0"> {/* Added px-4 for smaller screens */}
           <div className="flex items-center gap-3 mb-4 sm:mb-0">
              <Megaphone className="h-8 w-8 text-primary" />
-             <h2 className="text-3xl font-bold tracking-tight">
+             <h2 className="text-2xl md:text-3xl font-bold tracking-tight"> {/* Adjusted heading size for better mobile fit */}
                 Announcements & Pinned Posts
              </h2>
           </div>
           {session?.user?.role === 'admin' && (
             <Link href="/discussions">
-              <Button variant="outline" size="sm"> {/* Changed variant */}
+              <Button variant="outline" size="sm">
                 Manage Curations
               </Button>
             </Link>
@@ -167,16 +160,16 @@ export default function HomePage() {
         </div>
 
         {featuredDiscussions.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"> {/* Explicitly set grid-cols-1 for mobile */}
             {featuredDiscussions.map((discussion) => (
               <Card key={discussion._id} className="relative group hover:shadow-lg hover:border-primary/50 transition-all duration-200 flex flex-col">
                 {session?.user?.role === 'admin' && (
                   <div className="absolute top-3 right-3 z-10">
                     <Button
-                      size="icon" // Make it an icon button
+                      size="icon"
                       variant={discussion.isFeatured ? 'secondary' : 'outline'}
                       onClick={(e) => {
-                        e.stopPropagation(); // Prevent card click
+                        e.stopPropagation();
                         toggleFeature(discussion._id);
                       }}
                       className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
@@ -187,7 +180,7 @@ export default function HomePage() {
                   </div>
                 )}
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-semibold leading-snug mb-2 pr-10"> {/* Added padding right for pin button space */}
+                  <CardTitle className="text-base sm:text-lg font-semibold leading-snug mb-2 pr-10"> {/* Adjusted title size for smaller screens */}
                       <Link href={`/discussions/${discussion._id}`} className="hover:text-primary transition-colors duration-200 line-clamp-2">
                         {discussion.title}
                       </Link>
@@ -207,15 +200,15 @@ export default function HomePage() {
                        </Link>
                     </span>
                     <span className="mx-1.5">•</span>
-                    <span>{format(new Date(discussion.CreatedAt), 'MMM dd, yyyy')}</span> {/* Added year */}
+                    <span>{format(new Date(discussion.CreatedAt), 'MMM dd, yyyy')}</span>
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="flex-grow pb-4"> {/* Added flex-grow */}
+                <CardContent className="flex-grow pb-4">
                   <p className="text-sm line-clamp-3 text-muted-foreground">
                     {discussion.content}
                   </p>
                 </CardContent>
-                <CardFooter className="flex justify-between items-center pt-4 border-t"> {/* Added border-t */}
+                <CardFooter className="flex justify-between items-center pt-4 border-t">
                    <Button
                       variant="ghost"
                       size="sm"
@@ -234,7 +227,7 @@ export default function HomePage() {
             ))}
           </div>
         ) : (
-            <div className="text-center text-muted-foreground py-10 border rounded-lg">
+            <div className="text-center text-muted-foreground py-10 border rounded-lg mx-4 sm:mx-0"> {/* Added mx-4 for smaller screens */}
                 No announcements or pinned posts found.
             </div>
         )}
@@ -248,7 +241,7 @@ export default function HomePage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Contests Hosted</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold">{stats.contests}</div>
+            <div className="text-3xl sm:text-4xl font-bold">{stats.contests}</div> {/* Adjusted size for smaller screens */}
           </CardContent>
         </Card>
         <Card className="text-center hover:shadow-md transition-shadow duration-200">
@@ -257,7 +250,7 @@ export default function HomePage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Practice Problems</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold">{stats.problems}</div>
+            <div className="text-3xl sm:text-4xl font-bold">{stats.problems}</div> {/* Adjusted size for smaller screens */}
           </CardContent>
         </Card>
         <Card className="text-center hover:shadow-md transition-shadow duration-200">
@@ -266,7 +259,7 @@ export default function HomePage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Registered Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold">{stats.users}</div>
+            <div className="text-3xl sm:text-4xl font-bold">{stats.users}</div> {/* Adjusted size for smaller screens */}
           </CardContent>
         </Card>
       </section>

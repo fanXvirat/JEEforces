@@ -8,9 +8,10 @@ import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
-import { use } from 'react'; // Assuming 'use' hook is correctly implemented/imported
+import { use } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { cn } from '@/lib/utils'; // Import cn for conditional class names
 
 interface Problem {
     _id: string;
@@ -23,7 +24,7 @@ interface Problem {
 }
 
 interface Contest {
-    _id: string;
+    _id:string;
     title: string;
     startTime: string;
     endTime: string;
@@ -41,7 +42,7 @@ export default function ContestPage({ params }: ContestPageProps) {
     const contestId = unwrappedParams.id;
 
     const [contest, setContest] = useState<Contest | null>(null);
-    const [submissions, setSubmissions] = useState<Record<string, string>>({}); // This holds the selected options
+    const [submissions, setSubmissions] = useState<Record<string, string>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [hasFinalSubmission, setHasFinalSubmission] = useState(false);
@@ -52,7 +53,6 @@ export default function ContestPage({ params }: ContestPageProps) {
     const isActive = contest && startTime && endTime && now >= startTime && now <= endTime;
     const isEnded = contest && endTime && now > endTime;
 
-    // Group problems by subject (case-insensitive)
     const groupedProblems = contest?.problems.reduce((acc, problem) => {
         const subject = problem.subject?.toLowerCase() || 'other';
         if (!acc[subject]) acc[subject] = [];
@@ -60,15 +60,12 @@ export default function ContestPage({ params }: ContestPageProps) {
         return acc;
     }, {} as Record<string, Problem[]>);
 
-    // Filter subjects based on available problems
     const availableSubjects = groupedProblems ? Object.keys(groupedProblems) : [];
 
-    // Derive localStorage key
     const localStorageKey = session?.user?._id && contestId
         ? `contest-${contestId}-${session.user._id}-draftSubmissions`
         : null;
 
-    // Effect to fetch data and load draft submissions
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
@@ -78,55 +75,46 @@ export default function ContestPage({ params }: ContestPageProps) {
                     setIsLoading(false);
                     return;
                 }
-
-                // 1. Fetch contest details
                 const contestRes = await axios.get(`/api/contests/${contestId}`);
                 setContest(contestRes.data);
 
-                // Ensure session user ID is available for localStorage key and API calls
                 if (!session?.user?._id) {
-                    // If no session user, we can't load/save drafts specific to them
-                    // and cannot check for final submissions.
-                    setHasFinalSubmission(false); // No user, no final submission check
+                    setHasFinalSubmission(false);
                     setIsLoading(false);
                     return;
                 }
 
-                // 2. Try to load existing draft submissions from localStorage
                 if (localStorageKey) {
                     const savedDrafts = localStorage.getItem(localStorageKey);
                     if (savedDrafts) {
                         try {
                             const parsedDrafts = JSON.parse(savedDrafts);
-                            // Only set if valid object
                             if (typeof parsedDrafts === 'object' && parsedDrafts !== null) {
                                 setSubmissions(parsedDrafts);
                             }
                         } catch (e) {
                             console.error("Error parsing saved drafts from localStorage:", e);
-                            localStorage.removeItem(localStorageKey); // Clear corrupted data
+                            localStorage.removeItem(localStorageKey);
                         }
                     }
                 }
 
-                // 3. Fetch final submissions (will overwrite drafts if a final one exists)
                 try {
                     const submissionsRes = await axios.get(`/api/submissions?contestId=${contestId}&userId=${session.user._id}&IsFinal=true`);
                     if (submissionsRes.data && submissionsRes.data.length > 0) {
                         setHasFinalSubmission(true);
-                        // If a final submission exists, its values *should* overwrite any drafts
                         const finalSubs = submissionsRes.data.reduce((acc: Record<string, string>, sub: any) => {
-                            acc[sub.problem._id] = sub.selectedOptions[0]; // Assuming single option selection
+                            acc[sub.problem._id] = sub.selectedOptions[0];
                             return acc;
                         }, {});
-                        setSubmissions(finalSubs); // Final submission takes precedence
+                        setSubmissions(finalSubs);
                     } else {
-                        setHasFinalSubmission(false); // Explicitly set to false if no final subs found
+                        setHasFinalSubmission(false);
                     }
                 } catch (subError) {
                     console.error("Error fetching submissions:", subError);
                     toast.warning('Could not load previous submission status.');
-                    setHasFinalSubmission(false); // Assume no final submission on error
+                    setHasFinalSubmission(false);
                 }
 
             } catch (error) {
@@ -138,26 +126,20 @@ export default function ContestPage({ params }: ContestPageProps) {
             }
         };
 
-        // Trigger fetch only when contestId is available and auth status is not loading
         if (contestId && authStatus !== 'loading') {
             fetchData();
         } else if (authStatus !== 'loading' && !contestId) {
             setIsLoading(false);
         }
+    }, [contestId, session?.user?._id, authStatus, localStorageKey]); // Added session.user._id and localStorageKey
 
-    }, [contestId, session, authStatus]); // Add dependencies
-
-    // Effect to save draft submissions to localStorage whenever `submissions` state changes
     useEffect(() => {
         if (localStorageKey && isActive && !hasFinalSubmission && Object.keys(submissions).length > 0) {
-            // Only save if contest is active and no final submission has been made
             localStorage.setItem(localStorageKey, JSON.stringify(submissions));
-            // console.log("Drafts saved to localStorage:", submissions); // For debugging
         }
-    }, [submissions, isActive, hasFinalSubmission, localStorageKey]); // Add all dependencies
+    }, [submissions, isActive, hasFinalSubmission, localStorageKey]);
 
     const handleOptionSelect = (problemId: string, option: string) => {
-        // Only allow selection if contest is active and no final submission made
         if (isActive && !hasFinalSubmission) {
             setSubmissions(prev => ({ ...prev, [problemId]: option }));
         }
@@ -185,19 +167,15 @@ export default function ContestPage({ params }: ContestPageProps) {
             setHasFinalSubmission(true);
             toast.success('Final submission successful!');
 
-            // Clear draft submissions from localStorage after successful final submission
             if (localStorageKey) {
                 localStorage.removeItem(localStorageKey);
             }
-
             router.push(`/contests/${contest._id}/standings`);
-
         } catch (error: any) {
              console.error("Final Submission Error:", error.response?.data || error.message);
             if (error.response?.data?.error === "You have already made a final submission") {
                 setHasFinalSubmission(true);
                 toast.error(error.response.data.error);
-                // If backend confirms final submission, also clear local drafts
                 if (localStorageKey) {
                     localStorage.removeItem(localStorageKey);
                 }
@@ -210,12 +188,12 @@ export default function ContestPage({ params }: ContestPageProps) {
     };
 
     if (authStatus === 'loading' || isLoading) {
-        return <div className="flex justify-center items-center h-screen"><Loader2 className="h-12 w-12 animate-spin text-blue-600" /></div>;
+        return <div className="flex justify-center items-center h-screen"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
     }
      if (!session) {
         return (
-            <div className="flex flex-col items-center justify-center h-screen">
-                <p className="text-xl text-red-500 mb-4">Please log in to view the contest.</p>
+            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] px-4">
+                <p className="text-xl text-destructive mb-4 text-center">Please log in to view the contest.</p>
                 <Link href="/sign-in">
                     <Button>Login</Button>
                 </Link>
@@ -223,48 +201,53 @@ export default function ContestPage({ params }: ContestPageProps) {
         );
     }
     if (!contest) {
-        return <div className="text-center mt-10 text-red-500 font-semibold">Contest not found or failed to load.</div>;
+        return <div className="text-center mt-10 text-destructive font-semibold px-4">Contest not found or failed to load.</div>;
     }
     if (startTime && now < startTime) {
         return (
             <div className="container mx-auto p-6 text-center">
-                <h1 className="text-3xl font-bold mb-4">{contest.title}</h1>
-                <p className="text-xl text-gray-700">This contest has not started yet.</p>
-                <p className="text-gray-500">Starts at: {startTime.toLocaleString()}</p>
+                <h1 className="text-2xl md:text-3xl font-bold mb-4">{contest.title}</h1>
+                <p className="text-lg md:text-xl text-muted-foreground">This contest has not started yet.</p>
+                <p className="text-muted-foreground">Starts at: {startTime.toLocaleString()}</p>
             </div>
         );
     }
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-                <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{contest.title}</h1>
-                    <p className="text-sm text-muted-foreground mt-1">
+        <div className="container mx-auto px-4 py-6 sm:py-8"> {/* Adjusted padding for mobile */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
+                <div className="w-full sm:w-auto"> {/* Ensure title doesn't push buttons too far on mobile */}
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground leading-tight">{contest.title}</h1>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                         {startTime?.toLocaleString()} - {endTime?.toLocaleString()}
                         {!isActive && isEnded && <span className="ml-2 font-semibold text-destructive">(Ended)</span>}
                         {isActive && <span className="ml-2 font-semibold text-green-600">(Active)</span>}
                     </p>
                 </div>
-                <div className="flex gap-2 flex-shrink-0">
-                    <Link href={`/contests/${contest._id}/standings`}>
-                       <Button variant="outline">View Standings</Button>
+                <div className="flex gap-2 flex-shrink-0 w-full sm:w-auto justify-end sm:justify-normal"> {/* Buttons take full width on mobile then auto */}
+                    <Link href={`/contests/${contest._id}/standings`} className="flex-1 sm:flex-initial">
+                       <Button variant="outline" className="w-full">
+                           <span className="hidden sm:inline">View </span>Standings
+                        </Button>
                     </Link>
                     {isActive && (
                         <Button
                             onClick={handleFinalSubmit}
                             disabled={isSubmitting || hasFinalSubmission || !isActive}
-                            className={hasFinalSubmission ? 'bg-gray-400 hover:bg-gray-400' : ''}
+                            className={cn(
+                                "flex-1 sm:flex-initial w-full",
+                                hasFinalSubmission ? 'bg-gray-400 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-600' : ''
+                            )}
                         >
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {hasFinalSubmission ? 'Submitted' : 'Final Submit'}
                         </Button>
                     )}
                      {isEnded && !hasFinalSubmission && (
-                         <span className="text-sm text-orange-600 p-2">Contest ended. Final submission missed.</span>
+                         <span className="text-xs sm:text-sm text-orange-600 p-2 bg-orange-500/10 rounded-md w-full text-center sm:w-auto">Contest ended. Final submission missed.</span>
                      )}
                      {isEnded && hasFinalSubmission && (
-                         <span className="text-sm text-green-600 p-2">Contest ended. Submission recorded.</span>
+                         <span className="text-xs sm:text-sm text-green-600 p-2 bg-green-500/10 rounded-md w-full text-center sm:w-auto">Contest ended. Submission recorded.</span>
                      )}
                 </div>
             </div>
@@ -282,39 +265,43 @@ export default function ContestPage({ params }: ContestPageProps) {
 
             {availableSubjects.length > 0 ? (
                 <Tabs defaultValue={availableSubjects[0]} className="w-full">
-                    <TabsList className={` w-full grid-cols-${availableSubjects.length} mb-8 bg-muted`}>
-                        {availableSubjects.includes('physics') && <TabsTrigger value="physics">Physics</TabsTrigger>}
-                        {availableSubjects.includes('chemistry') && <TabsTrigger value="chemistry">Chemistry</TabsTrigger>}
-                        {availableSubjects.includes('mathematics') && <TabsTrigger value="mathematics">Mathematics</TabsTrigger>}
+                    {/* TabsList made scrollable on mobile and centered on larger screens */}
+                    <TabsList className="mb-6 sm:mb-8 bg-muted p-1 rounded-md flex w-full overflow-x-auto whitespace-nowrap sm:justify-center">
+                        {availableSubjects.includes('physics') && <TabsTrigger value="physics" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm">Physics</TabsTrigger>}
+                        {availableSubjects.includes('chemistry') && <TabsTrigger value="chemistry" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm">Chemistry</TabsTrigger>}
+                        {availableSubjects.includes('mathematics') && <TabsTrigger value="mathematics" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm">Mathematics</TabsTrigger>}
                         {availableSubjects.filter(s => !['physics', 'chemistry', 'mathematics'].includes(s)).map(subject => (
-                             <TabsTrigger key={subject} value={subject} className="capitalize">{subject}</TabsTrigger>
+                             <TabsTrigger key={subject} value={subject} className="capitalize flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm">{subject}</TabsTrigger>
                         ))}
                     </TabsList>
 
                     {Object.entries(groupedProblems || {}).map(([subject, problems]) => (
                         <TabsContent key={subject} value={subject}>
+                            {/* Grid remains single column on mobile, then adapts */}
                             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
                                 {problems.map((problem, index) => (
                                     <Card key={problem._id} className="flex flex-col">
                                         <CardHeader>
-                                            <CardTitle className="text-lg">
+                                            {/* Adjusted problem title size */}
+                                            <CardTitle className="text-base sm:text-lg leading-snug">
                                                 {`Problem ${index + 1}: ${problem.title}`}
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent className="flex-grow space-y-4">
                                             {problem.imageUrl && (
-                                                <div className="mb-4 border rounded-md bg-muted/40 flex justify-center">
+                                                <div className="mb-4 border rounded-md bg-muted/40 flex justify-center p-2 sm:p-0">
                                                     <Image
                                                         src={problem.imageUrl}
                                                         alt={`Illustration for ${problem.title}`}
                                                         width={400}
                                                         height={300}
-                                                        className="object-contain max-h-[300px] rounded"
-                                                        priority={index < 3}
+                                                        className="object-contain max-h-[250px] sm:max-h-[300px] rounded" // Slightly smaller max-height on mobile for image
+                                                        priority={index < 2} // Prioritize loading for first few images
                                                     />
                                                 </div>
                                             )}
-                                            <div className="prose prose-sm max-w-none text-muted-foreground">
+                                            <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
+                                                {/* Using dangerouslySetInnerHTML for HTML content if needed, or just <p> for plain text */}
                                                 <p>{problem.description}</p>
                                             </div>
                                             <div className="space-y-2 pt-2">
@@ -322,7 +309,7 @@ export default function ContestPage({ params }: ContestPageProps) {
                                                     <Button
                                                         key={optIndex}
                                                         variant={submissions[problem._id] === option ? 'default' : 'outline'}
-                                                        className="w-full text-left justify-start h-auto py-2 whitespace-normal border"
+                                                        className="w-full text-left justify-start h-auto py-2.5 sm:py-2 whitespace-normal border text-sm" // Increased tap target size slightly
                                                         onClick={() => handleOptionSelect(problem._id, option)}
                                                         disabled={!isActive || hasFinalSubmission}
                                                         aria-pressed={submissions[problem._id] === option}
@@ -340,7 +327,10 @@ export default function ContestPage({ params }: ContestPageProps) {
                     ))}
                 </Tabs>
              ) : (
-                  <div className="text-center text-muted-foreground mt-10">No problems found for this contest.</div>
+                  <div className="text-center text-muted-foreground mt-10 px-4">
+                      <p className="text-lg">No problems found for this contest.</p>
+                      <p className="text-sm mt-1">Please check back later or contact support if you believe this is an error.</p>
+                  </div>
              )}
         </div>
     );
