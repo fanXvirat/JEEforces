@@ -3,13 +3,16 @@ import ProblemModel from "@/backend/models/Problem.model";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/options";
 import { NextRequest } from "next/server";
+import { User } from "next-auth";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   await dbConnect();
-  
+  const session = await getServerSession(authOptions);
+  const user: User | undefined = session?.user;
+
   try {
     // Properly access params after awaiting
     const problem = await ProblemModel.findById(params.id);
@@ -19,6 +22,12 @@ export async function GET(
         JSON.stringify({ error: "Problem not found" }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+    if (user?.role !== 'admin' && !problem.ispublished) {
+        return new Response(
+            JSON.stringify({ error: "Problem not found or unauthorized access" }),
+            { status: 404, headers: { 'Content-Type': 'application/json' } }
+        );
     }
 
     return new Response(

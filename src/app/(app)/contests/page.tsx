@@ -1,25 +1,27 @@
 'use client';
 import { useSession } from 'next-auth/react';
-import React, { useState, useEffect, useCallback } from 'react'; // Added React
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import axios, { AxiosError } from 'axios';
-import { Loader2, RefreshCcw, Trophy, PlusCircle, Users, BarChartHorizontal, LogIn, CheckCheck, CalendarClock, ArrowRight } from 'lucide-react'; // Added icons
+import { Loader2, RefreshCcw, Trophy, PlusCircle, Users, BarChartHorizontal, LogIn, CheckCheck, CalendarClock, Eye, EyeOff } from 'lucide-react'; // Added Eye, EyeOff icons
 import { toast } from 'sonner';
 import {
-    Card,
+    Card, 
     CardHeader,
     CardTitle,
     CardDescription,
     CardContent,
     CardFooter,
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge'; // Import Badge
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { cn } from '@/lib/utils'; // Import cn
+import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
-// Assuming SessionUser type is defined elsewhere or as follows:
+
 type SessionUser = {
     _id?: string;
     name?: string | null | undefined;
@@ -38,7 +40,6 @@ interface Contest {
     participants: Array<{ _id: string }>;
 }
 
-// Helper to get contest status and badge props
 const getContestStatus = (startTimeStr: string, endTimeStr: string): { status: 'upcoming' | 'running' | 'ended'; variant: 'default' | 'secondary' | 'outline'; className: string; text: string } => {
     const now = new Date();
     const startTime = new Date(startTimeStr);
@@ -53,77 +54,70 @@ const getContestStatus = (startTimeStr: string, endTimeStr: string): { status: '
     }
 };
 
-// --- Skeleton Card Component ---
 const ContestCardSkeleton = () => (
     <Card className="flex flex-col justify-between">
         <div>
             <CardHeader>
-                <Skeleton className="h-6 w-3/4 mb-2 rounded" /> {/* Title */}
-                <Skeleton className="h-4 w-1/2 mb-1 rounded" /> {/* Date */}
-                <Skeleton className="h-4 w-1/2 rounded" /> {/* Date */}
+                <Skeleton className="h-6 w-3/4 mb-2 rounded" />
+                <Skeleton className="h-4 w-1/2 mb-1 rounded" />
+                <Skeleton className="h-4 w-1/2 rounded" />
             </CardHeader>
             <CardContent>
                  <div className="flex justify-between items-center mb-3">
-                     <Skeleton className="h-5 w-20 rounded-full" /> {/* Badge */}
-                     <Skeleton className="h-4 w-16 rounded" /> {/* Participants */}
+                     <Skeleton className="h-5 w-20 rounded-full" />
+                     <Skeleton className="h-4 w-16 rounded" />
                  </div>
-                 <Skeleton className="h-4 w-full mb-1 rounded" /> {/* Description */}
-                 <Skeleton className="h-4 w-5/6 rounded" /> {/* Description */}
+                 <Skeleton className="h-4 w-full mb-1 rounded" />
+                 <Skeleton className="h-4 w-5/6 rounded" />
             </CardContent>
         </div>
         <CardFooter>
-            <Skeleton className="h-10 w-full rounded" /> {/* Button */}
+            <Skeleton className="h-10 w-full rounded" />
         </CardFooter>
     </Card>
 );
 
-
-// --- Main Component ---
-export default function ContestListPage() { // Renamed component
+export default function ContestListPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const [contests, setContests] = useState<Contest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRegistering, setIsRegistering] = useState<string | null>(null);
     const [isUpdatingRatings, setIsUpdatingRatings] = useState<string | null>(null);
+    const [isTogglingPublish, setIsTogglingPublish] = useState<string | null>(null);
+    const [isReleasingProblems, setIsReleasingProblems] = useState<string | null>(null); // RENAMED state
 
     const user = session?.user as SessionUser | undefined;
 
     const fetchContests = useCallback(async (showLoading = true) => {
-        // No need to check status/user here, handled in effect/render logic
         if (showLoading) setIsLoading(true);
         try {
             const response = await axios.get<Contest[]>('/api/contests');
-            // Filter client-side based on role (alternative: API could filter based on role)
-             setContests(response.data.filter(c => c.ispublished || user?.role === 'admin'));
+            setContests(response.data);
         } catch (error) {
             console.error("Fetch contests error:", error);
             const axiosError = error as AxiosError<{ message: string }>;
             toast.error(axiosError.response?.data?.message || 'Failed to fetch contests');
-             setContests([]); // Clear contests on error
+            setContests([]);
         } finally {
             if (showLoading) setIsLoading(false);
         }
-    }, [user?.role]); // Depend on user role for filtering logic
+    }, []);
 
     useEffect(() => {
-         // Fetch only when authenticated, otherwise set loading false
-         if (status === 'authenticated') {
-             fetchContests();
-         } else if (status === 'unauthenticated') {
-             setIsLoading(false); // Not loading if not logged in
-         }
-         // 'loading' status is handled by the initial render check
+        if (status === 'authenticated') {
+            fetchContests();
+        } else if (status === 'unauthenticated') {
+            setIsLoading(false);
+        }
     }, [status, fetchContests]);
 
     const handleRegister = async (contestId: string) => {
         if (!user?._id || isRegistering) return;
-
         setIsRegistering(contestId);
         try {
             const response = await axios.post(`/api/contests/${contestId}/register`);
             toast.success(response.data.message || 'Registered successfully!');
-            // Optimistic UI update (more robust than refetching)
             setContests(prevContests =>
                 prevContests.map(contest =>
                     contest._id === contestId
@@ -132,7 +126,7 @@ export default function ContestListPage() { // Renamed component
                 )
             );
         } catch (error) {
-             console.error("Registration error:", error);
+            console.error("Registration error:", error);
             const axiosError = error as AxiosError<{ error: string }>;
             toast.error(axiosError.response?.data?.error || 'Registration failed. Already registered or contest unavailable.');
         } finally {
@@ -142,15 +136,12 @@ export default function ContestListPage() { // Renamed component
 
     const handleUpdateRatings = async (contestId: string) => {
         if (!user?._id || user.role !== 'admin' || isUpdatingRatings) return;
-
         setIsUpdatingRatings(contestId);
         try {
             const res = await axios.post(`/api/contests/${contestId}/update-ratings`);
             toast.success(res.data.message || 'Ratings updated successfully');
-            // Optionally refetch contests if rating update changes displayed info
-            // fetchContests(false); // Refetch without full loading state
         } catch (error) {
-             console.error("Update ratings error:", error);
+            console.error("Update ratings error:", error);
             const axiosError = error as AxiosError<{ error: string }>;
             toast.error(axiosError.response?.data?.error || 'Failed to update ratings');
         } finally {
@@ -158,9 +149,56 @@ export default function ContestListPage() { // Renamed component
         }
     };
 
-    // --- Render Action Button Logic ---
+    const handleTogglePublish = async (contestId: string, currentStatus: boolean) => {
+        if (user?.role !== 'admin' || isTogglingPublish) return;
+
+        setIsTogglingPublish(contestId);
+        try {
+            const response = await axios.patch(`/api/contests/${contestId}/toggle-publish`);
+            const newStatus = response.data.ispublished;
+            toast.success(response.data.message);
+
+            setContests(prevContests =>
+                prevContests.map(contest =>
+                    contest._id === contestId
+                        ? { ...contest, ispublished: newStatus }
+                        : contest
+                )
+            );
+        } catch (error) {
+            console.error("Toggle publish error:", error);
+            const axiosError = error as AxiosError<{ error: string }>;
+            toast.error(axiosError.response?.data?.error || 'Failed to toggle contest publicity.');
+        } finally {
+            setIsTogglingPublish(null);
+        }
+    };
+
+    // NEW: Handler for releasing problems after contest ends
+    const handleReleaseProblems = async (contestId: string) => {
+        if (!user?._id || user.role !== 'admin' || isReleasingProblems) return;
+
+        setIsReleasingProblems(contestId);
+        try {
+            // Call the new API endpoint
+            const response = await axios.patch(`/api/contests/${contestId}/release-problems`);
+            toast.success(response.data.message);
+            // Optionally, re-fetch contests if their state needs to reflect
+            // that problems have been released (e.g., if Contest model tracked this)
+            // Or just rely on toast and the fact that problem list will now show them.
+            // fetchContests(false); // Can trigger a soft refresh if needed
+        } catch (error) {
+            console.error("Release problems error:", error);
+            const axiosError = error as AxiosError<{ error: string }>;
+            toast.error(axiosError.response?.data?.error || 'Failed to release problems.');
+        } finally {
+            setIsReleasingProblems(null);
+        }
+    };
+
+
     const renderContestButton = (contest: Contest) => {
-        if (!user?._id) return null; // Should not happen if authenticated check passes, but good practice
+        if (!user?._id) return null;
 
         const { status } = getContestStatus(contest.startTime, contest.endTime);
         const userIdString = user._id.toString();
@@ -184,27 +222,25 @@ export default function ContestListPage() { // Renamed component
                     </Button>
                 );
             case 'running':
-                 // Only allow entry if registered
-                 if (isRegistered) {
+                if (isRegistered) {
                     return (
                         <Button className="w-full" onClick={() => router.push(`/contests/${contest._id}`)}>
                             <LogIn className="mr-2 h-4 w-4" /> Enter Contest
                         </Button>
                     );
-                 } else {
-                    // Show a disabled state if running but not registered (registration likely closed)
+                } else {
                     return (
-                         <Button className="w-full" disabled variant="secondary">
-                             Registration Closed
-                         </Button>
+                        <Button className="w-full" disabled variant="secondary">
+                            Registration Closed
+                        </Button>
                     );
-                 }
+                }
             case 'ended':
                 return (
                     <Button
                         className="w-full"
                         variant="secondary"
-                        onClick={() => router.push(`/contests/${contest._id}/standings`)} // Assume standings route exists
+                        onClick={() => router.push(`/contests/${contest._id}/standings`)}
                     >
                         <BarChartHorizontal className="mr-2 h-4 w-4" /> View Results
                     </Button>
@@ -214,15 +250,14 @@ export default function ContestListPage() { // Renamed component
         }
     };
 
-    // --- Render Loading State ---
     if (status === 'loading' || (status === 'authenticated' && isLoading)) {
         return (
             <div className="container mx-auto px-4 py-8 md:py-12">
                  <div className="flex justify-between items-center mb-8">
-                    <Skeleton className="h-10 w-64 rounded" /> {/* Title Skeleton */}
-                    <Skeleton className="h-10 w-10 rounded-full" /> {/* Refresh Button Skeleton */}
+                    <Skeleton className="h-10 w-64 rounded" />
+                    <Skeleton className="h-10 w-10 rounded-full" />
                  </div>
-                 {session?.user?.role === 'admin' && <Skeleton className="h-10 w-40 mb-8 rounded" />} {/* Create Button Skeleton */}
+                 {session?.user?.role === 'admin' && <Skeleton className="h-10 w-40 mb-8 rounded" />}
                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {[...Array(6)].map((_, i) => <ContestCardSkeleton key={i} />)}
                 </div>
@@ -230,7 +265,6 @@ export default function ContestListPage() { // Renamed component
         );
     }
 
-    // --- Render Unauthenticated State ---
     if (status === 'unauthenticated') {
         return (
             <div className="container mx-auto px-4 py-8 md:py-12 text-center mt-10">
@@ -239,10 +273,8 @@ export default function ContestListPage() { // Renamed component
         );
     }
 
-    // --- Render Authenticated State ---
     return (
         <div className="container mx-auto px-4 py-8 md:py-12">
-            {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-2">
                     <Trophy className="h-8 w-8 text-primary" />
@@ -258,9 +290,9 @@ export default function ContestListPage() { // Renamed component
                         </Link>
                     )}
                     <Button
-                        variant="ghost" // Changed to ghost for less emphasis
+                        variant="ghost"
                         size="icon"
-                        onClick={() => fetchContests(true)} // Pass true to show loading state on manual refresh
+                        onClick={() => fetchContests(true)}
                         disabled={isLoading}
                         title="Refresh Contests"
                     >
@@ -269,23 +301,22 @@ export default function ContestListPage() { // Renamed component
                 </div>
             </div>
 
-
-            {/* Contests Grid */}
             {contests.length === 0 && !isLoading ? (
                 <div className="text-center py-16 text-muted-foreground">
                     <Trophy className="mx-auto h-12 w-12 mb-4 opacity-50" />
                     <p className="text-lg">No contests available at the moment.</p>
                     {user?.role === 'admin' && <p className="mt-2">You can create a new one!</p>}
-                 </div>
+                </div>
             ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {contests.map((contest) => {
                         const { status, variant, className: badgeClassName, text: statusText } = getContestStatus(contest.startTime, contest.endTime);
-                         const isEnded = status === 'ended';
+                        const isEnded = status === 'ended';
+                        const toggleLoading = isTogglingPublish === contest._id;
+                        const releaseProblemsLoading = isReleasingProblems === contest._id; // NEW loading state variable
 
                         return (
                             <Card key={contest._id} className="hover:shadow-md transition-shadow duration-200 flex flex-col justify-between border">
-                                {/* Card Main Content */}
                                 <div>
                                     <CardHeader className="pb-3">
                                         <div className="flex justify-between items-start gap-2 mb-1">
@@ -303,30 +334,57 @@ export default function ContestListPage() { // Renamed component
                                     <CardContent className="pt-0 pb-4">
                                         <p className="text-sm text-muted-foreground line-clamp-3 mb-3">{contest.description || "No description provided."}</p>
                                           {user?.role === 'admin' && (
-                                              <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                                <Users className="h-3 w-3" />
-                                                <span>{contest.participants.length} registered</span>
+                                              <div className="text-xs text-muted-foreground flex items-center justify-between gap-1 mt-2">
+                                                <div className="flex items-center gap-1">
+                                                    <Users className="h-3 w-3" />
+                                                    <span>{contest.participants.length} registered</span>
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    <Label htmlFor={`publish-toggle-${contest._id}`} className="flex items-center text-xs gap-1 cursor-pointer">
+                                                        {contest.ispublished ? <Eye className="h-3 w-3 text-green-600" /> : <EyeOff className="h-3 w-3 text-red-600" />}
+                                                        <span>{contest.ispublished ? 'Published' : 'Draft'}</span>
+                                                    </Label>
+                                                    <Switch
+                                                        id={`publish-toggle-${contest._id}`}
+                                                        checked={contest.ispublished}
+                                                        onCheckedChange={() => handleTogglePublish(contest._id, contest.ispublished)}
+                                                        disabled={toggleLoading}
+                                                        aria-label={`Toggle publication for ${contest.title}`}
+                                                    />
+                                                </div>
                                               </div>
                                           )}
                                     </CardContent>
                                 </div>
 
-                                {/* Card Footer for Actions */}
                                 <CardFooter className="flex flex-col gap-2 pt-4 border-t">
                                      {renderContestButton(contest)}
 
-                                    {/* Admin: Update Ratings Button */}
                                     {user?.role === 'admin' && isEnded && (
-                                        <Button
-                                            variant="ghost" // Make it less prominent than primary action
-                                            size="sm"
-                                            className="w-full text-xs text-muted-foreground"
-                                            onClick={() => handleUpdateRatings(contest._id)}
-                                            disabled={isUpdatingRatings === contest._id}
-                                        >
-                                            {isUpdatingRatings === contest._id && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
-                                            Update Ratings
-                                        </Button>
+                                        <>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="w-full text-xs text-muted-foreground"
+                                                onClick={() => handleUpdateRatings(contest._id)}
+                                                disabled={isUpdatingRatings === contest._id}
+                                            >
+                                                {isUpdatingRatings === contest._id && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+                                                Update Ratings
+                                            </Button>
+                                            {/* NEW: Release Problems Globally Button */}
+                                            <Button
+                                                variant="secondary" // Use a distinct variant
+                                                size="sm"
+                                                className="w-full text-xs"
+                                                onClick={() => handleReleaseProblems(contest._id)} // Call the new handler
+                                                disabled={releaseProblemsLoading} // Use the new loading state
+                                            >
+                                                {releaseProblemsLoading && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+                                                Release Problems Globally
+                                            </Button>
+                                            {/* END NEW */}
+                                        </>
                                     )}
                                 </CardFooter>
                             </Card>

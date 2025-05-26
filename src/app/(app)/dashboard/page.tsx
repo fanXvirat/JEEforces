@@ -1,110 +1,130 @@
 'use client';
 
+import React, { useEffect, useState, useCallback, Key } from 'react';
 import { useSession } from 'next-auth/react';
-import { useState, useEffect, useCallback, Key } from 'react';
 import { Button } from '@/components/ui/button';
 import axios, { AxiosError } from 'axios';
-import { Loader2, Settings, User, Mail, Building, CalendarDays, BarChart3, CheckSquare, History, Trophy, ArrowRight } from 'lucide-react'; // Added icons
+import { Loader2, Settings, Mail, Building, CalendarDays, BarChart3, CheckSquare, History, Trophy, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { UserType } from '@/types/User';
 import { Separator } from '@/components/ui/separator';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter // Added CardFooter if needed later
-} from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import Link from 'next/link';
 import { RatingChart } from '@/components/rating-chart';
 import { getTitleColor } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Use Shadcn Avatar
-// Removed CldImage import, using Shadcn Avatar which can handle URLs
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useQueries } from '@tanstack/react-query'; // Import useQueries
 
-interface RatingHistoryEntry {
-  newrating: number;
-  timestamp: string;
-  contestTitle: string;
-}
-
-interface ContestEntry {
+// Define interfaces for each API's expected response
+interface UserProfileResponse {
   _id: string;
+  username: string;
+  email: string;
+  avatar?: string;
+  rating: number;
   title: string;
-  startTime: string;
+  institute?: string;
+  yearofstudy?: string;
 }
-interface UserStats {
-  ratingHistory: Array<RatingHistoryEntry>;
-  contestsJoined: Array<ContestEntry>;
+
+interface UserStatsResponse {
+  ratingHistory: Array<{
+    newrating: number;
+    timestamp: string;
+    contestTitle: string;
+  }>;
+  contestsJoined: Array<{
+    _id: string;
+    title: string;
+    startTime: string;
+  }>;
+}
+
+interface UserStattsResponse {
+  problemsSolved: number;
+  totalAttempted: number;
   accuracy: number;
 }
 
-// Helper to get initials from username (if not already available globally)
 const getInitials = (name: string = '') => {
   return name
     .split(' ')
     .map((n) => n[0])
     .slice(0, 2)
-    .join('');
+    .join('')
+    .toUpperCase() || '?';
 };
 
-export default function DashboardPage() { // Renamed component for clarity
+export default function DashboardPage() {
   const { data: session, status } = useSession();
 
-  const [userDetails, setUserDetails] = useState<UserType | null>(null);
-  const [userStats, setUserStats] = useState<UserStats | null>(null); // Use specific type
-  const [isLoading, setIsLoading] = useState(true);
+  // Define queries using useQueries
+  // Each query definition includes its queryKey, queryFn, and enabled state
+  const queries = useQueries({
+    queries: [
+      {
+        queryKey: ['userProfile', session?.user?._id],
+        queryFn: async () => {
+          const res = await axios.get<UserProfileResponse>('/api/user');
+          return res.data;
+        },
+        enabled: status === 'authenticated' && !!session?.user?._id,
+        staleTime: 60 * 60 * 1000, // 1 hour, matches backend TTL
+      },
+      {
+        queryKey: ['userStats', session?.user?._id],
+        queryFn: async () => {
+          const res = await axios.get<UserStatsResponse>('/api/user/stats');
+          return res.data;
+        },
+        enabled: status === 'authenticated' && !!session?.user?._id,
+        staleTime: 5 * 60 * 1000, // 5 minutes, matches backend TTL
+      },
+      {
+        queryKey: ['userStatts', session?.user?._id], // Note the 'statts' endpoint name
+        queryFn: async () => {
+          const res = await axios.get<UserStattsResponse>('/api/user/statts');
+          return res.data;
+        },
+        enabled: status === 'authenticated' && !!session?.user?._id,
+        staleTime: 5 * 60 * 1000, // 5 minutes, matches backend TTL
+      },
+    ],
+  });
 
-  // Combined fetch function for better state management
-  const fetchData = useCallback(async () => {
-    if (!session?.user || status !== 'authenticated') return;
+  // Extract data and loading states from the queries array
+  const userProfileQuery = queries[0];
+  const userStatsQuery = queries[1];
+  const userStattsQuery = queries[2]; // Using 'statts' for problems solved/accuracy
 
-    setIsLoading(true);
-    try {
-      // Fetch both user details and stats concurrently
-      const [userResponse, statsResponse,accuracyResponse] = await Promise.all([
-        axios.get<UserType>('/api/user'),
-        axios.get<UserStats>('/api/user/stats'),
-        axios.get('/api/user/statts')
-      ]);
-      setUserDetails({
-      ...userResponse.data,
-      problemsSolved: accuracyResponse.data.problemsSolved
-      });
-    
-      setUserStats({
-        ...statsResponse.data,
-        accuracy: accuracyResponse.data.accuracy
-      });
+  // Combine loading states
+  const isLoadingAny = userProfileQuery.isLoading || userStatsQuery.isLoading || userStattsQuery.isLoading;
+  const isFetchingAny = userProfileQuery.isFetching || userStatsQuery.isFetching || userStattsQuery.isFetching;
+  const isErrorAny = userProfileQuery.isError || userStatsQuery.isError || userStattsQuery.isError;
 
-    } catch (error) {
-      console.error("Failed to fetch dashboard data:", error);
-      const axiosError = error as AxiosError<{ message: string }>;
-      const errorMessage = axiosError.response?.data?.message ||
-                           (axiosError.isAxiosError ? `Network Error or Server Issue (${axiosError.code})` : 'An unexpected error occurred');
-      toast.error(`Failed to load dashboard: ${errorMessage}`);
-      // Optionally clear stale data on error
-      // setUserDetails(null);
-      // setUserStats(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [session, status]); // Depend on session and status
+  // Manual refetch for retry button (refetches all enabled queries)
+  const refetchAll = useCallback(() => {
+    userProfileQuery.refetch();
+    userStatsQuery.refetch();
+    userStattsQuery.refetch();
+  }, [userProfileQuery.refetch, userStatsQuery.refetch, userStattsQuery.refetch]);
 
+  // Handle errors
   useEffect(() => {
-    // Fetch data only when authenticated
-    if (status === 'authenticated') {
-      fetchData();
-    } else if (status === 'unauthenticated') {
-      // Handle unauthenticated state if needed (e.g., redirect or show message)
-      setIsLoading(false); // Stop loading if unauthenticated
+    if (isErrorAny) {
+      const errorMessage =
+        (userProfileQuery.error as AxiosError)?.response?.data ||
+        (userStatsQuery.error as AxiosError)?.response?.data ||
+        (userStattsQuery.error as AxiosError)?.response?.data ||
+        'An unexpected error occurred while loading dashboard data.';
+      console.error("Dashboard fetch error:", errorMessage, userProfileQuery.error, userStatsQuery.error, userStattsQuery.error);
+      toast.error(`Failed to load dashboard: ${errorMessage}`);
     }
-    // 'loading' status is handled by the initial return below
-  }, [status, fetchData]); // Trigger effect when status changes
+  }, [isErrorAny, userProfileQuery.error, userStatsQuery.error, userStattsQuery.error]);
+
 
   // --- Loading State ---
-  if (status === 'loading' || (status === 'authenticated' && isLoading)) {
+  if (status === 'loading' || (status === 'authenticated' && isLoadingAny && (!userProfileQuery.data && !userStatsQuery.data && !userStattsQuery.data))) {
       return (
         <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
              <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -125,19 +145,28 @@ export default function DashboardPage() { // Renamed component for clarity
     );
   }
 
-  // --- Error State (Data failed to load) ---
-   if (!isLoading && !userDetails) {
+  // --- Error State (Data failed to load after initial loading, or re-fetch failed) ---
+   if (isErrorAny && (!userProfileQuery.data && !userStatsQuery.data && !userStattsQuery.data)) {
      return (
        <div className="flex flex-col justify-center items-center min-h-[calc(100vh-200px)] text-center">
          <h2 className="text-2xl font-semibold mb-4 text-destructive">Error Loading Dashboard</h2>
          <p className="text-muted-foreground mb-6">Could not fetch your details. Please try again later.</p>
-         <Button onClick={fetchData} variant="outline">Retry</Button>
+         <Button onClick={refetchAll} variant="outline">Retry</Button>
        </div>
      );
    }
 
+  // If we reach here, we expect at least some data, even if partial (due to TanStack Query caching)
+  // Ensure userProfileData is available for rendering the main layout
+  if (!userProfileQuery.data) {
+      return null; // Or a more specific loading/error state if partial data is not acceptable for initial render
+  }
 
-  // --- Authenticated & Data Loaded State ---
+  // Combine data for rendering
+  const userDetails = userProfileQuery.data;
+  const userStats = userStatsQuery.data; // Rating history and contests joined
+  const userAccuracyStats = userStattsQuery.data; // Problems solved and accuracy
+
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
       {/* Header */}
@@ -160,19 +189,19 @@ export default function DashboardPage() { // Renamed component for clarity
           <Card className="overflow-hidden">
             <CardHeader className="flex flex-row items-center space-x-4 p-4 sm:p-6 bg-muted/30 border-b">
               <Avatar className="h-16 w-16 border-2 border-primary/50">
-                 <AvatarImage src={userDetails?.avatar} alt={userDetails?.username || 'User'} />
-                 <AvatarFallback className="text-xl bg-background">{getInitials(userDetails?.username)}</AvatarFallback>
+                 <AvatarImage src={userDetails.avatar} alt={userDetails.username} />
+                 <AvatarFallback className="text-xl bg-background">{getInitials(userDetails.username)}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                 <h2 className="text-xl font-bold tracking-tight" style={{ color: getTitleColor(userDetails?.title || 'newbie') }}>
-                    {userDetails?.username || 'User'}
+                 <h2 className="text-xl font-bold tracking-tight" style={{ color: getTitleColor(userDetails.title) }}>
+                    {userDetails.username}
                  </h2>
-                 <p className="text-sm font-medium capitalize" style={{ color: getTitleColor(userDetails?.title || 'newbie') }}>
-                    {userDetails?.title || 'Newbie'}
+                 <p className="text-sm font-medium capitalize" style={{ color: getTitleColor(userDetails.title) }}>
+                    {userDetails.title}
                  </p>
                  <p className="text-xs text-muted-foreground flex items-center mt-1">
                     <Mail className="h-3 w-3 mr-1.5"/>
-                    {userDetails?.email || 'No email'}
+                    {userDetails.email}
                  </p>
               </div>
             </CardHeader>
@@ -180,12 +209,11 @@ export default function DashboardPage() { // Renamed component for clarity
                 <div className="flex items-center">
                     <Building className="h-4 w-4 mr-3 text-muted-foreground" />
                     <span className="text-muted-foreground mr-2">Institute:</span>
-                    <span className="font-medium">{userDetails?.institute || <span className="text-muted-foreground italic">Not provided</span>}</span>
+                    <span className="font-medium">{userDetails.institute || <span className="text-muted-foreground italic">Not provided</span>}</span>
                 </div>
                 <div className="flex items-center">
                     <CalendarDays className="h-4 w-4 mr-3 text-muted-foreground" />
-                    <span className="text-muted-foreground mr-2">Year:</span>
-                    <span className="font-medium">{userDetails?.yearofstudy || <span className="text-muted-foreground italic">Not provided</span>}</span>
+                    <span className="font-medium">{userDetails.yearofstudy || <span className="text-muted-foreground italic">Not provided</span>}</span>
                 </div>
             </CardContent>
           </Card>
@@ -194,7 +222,6 @@ export default function DashboardPage() { // Renamed component for clarity
            <Card>
              <CardHeader>
                <CardTitle className="text-lg">Your Stats</CardTitle>
-               {/* Optional: Add CardDescription if needed */}
              </CardHeader>
              <CardContent className="space-y-5">
                <div className="flex items-center justify-between">
@@ -202,24 +229,21 @@ export default function DashboardPage() { // Renamed component for clarity
                     <BarChart3 className="h-5 w-5 mr-3 text-blue-500" />
                     <p className="text-sm font-medium">Current Rating</p>
                  </div>
-                 <p className="text-lg font-bold">{userDetails?.rating ?? 'N/A'}</p>
+                 <p className="text-lg font-bold">{userDetails.rating ?? 'N/A'}</p>
                </div>
                <div className="flex items-center justify-between">
                   <div className="flex items-center">
                      <CheckSquare className="h-5 w-5 mr-3 text-green-500" />
                      <p className="text-sm font-medium">Problems Solved</p>
                   </div>
-                  <p className="text-lg font-bold">{userDetails?.problemsSolved || 0}</p>
+                  <p className="text-lg font-bold">{userAccuracyStats?.problemsSolved || 0}</p>
                </div>
-                {/* Accuracy - Kept as requested, but maybe add context if it's not dynamic */}
                <div>
                   <div className="flex items-center justify-between mb-1">
                      <p className="text-sm font-medium text-muted-foreground">Overall Accuracy</p>
-                     <p className="text-sm font-semibold text-muted-foreground">{userStats?.accuracy?.toFixed(1) || 0}%</p> {/* Hardcoded value */}
+                     <p className="text-sm font-semibold text-muted-foreground">{userAccuracyStats?.accuracy?.toFixed(1) || 0}%</p>
                   </div>
-                  <Progress value={userStats?.accuracy || 0} className="h-2" aria-label="Overall Accuracy Progress"/>
-                  {/* Consider adding a small note if this value isn't from the backend */}
-                  {/* <p className="text-xs text-muted-foreground mt-1 italic">*Accuracy calculation based on mock data.</p> */}
+                  <Progress value={userAccuracyStats?.accuracy || 0} className="h-2" aria-label="Overall Accuracy Progress"/>
                </div>
              </CardContent>
            </Card>
@@ -237,12 +261,12 @@ export default function DashboardPage() { // Renamed component for clarity
               <CardDescription>Your rating changes over time based on contest performance.</CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoading && !userStats ? ( // Show skeleton/loader if stats are still loading
+              {userStatsQuery.isLoading || userStatsQuery.isFetching ? (
                  <div className="h-64 flex items-center justify-center bg-muted/50 rounded-md">
                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                  </div>
               ) : userStats?.ratingHistory?.length ? (
-                <div className="h-64 md:h-80"> {/* Give chart a defined height */}
+                <div className="h-64 md:h-80">
                   <RatingChart
                     data={userStats.ratingHistory.map((rh) => ({
                       newrating: rh.newrating,
@@ -270,9 +294,9 @@ export default function DashboardPage() { // Renamed component for clarity
                <CardDescription>A list of contests you have participated in.</CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoading && !userStats ? ( // Show skeleton/loader if stats are still loading
+              {userStatsQuery.isLoading || userStatsQuery.isFetching ? (
                 <div className="space-y-2">
-                  {[...Array(3)].map((_, i) => ( // Skeleton Loader for contests
+                  {[...Array(3)].map((_, i) => (
                     <div key={i} className="flex items-center justify-between p-3 bg-muted/50 rounded-md animate-pulse">
                         <div className="h-4 bg-muted rounded w-3/5"></div>
                         <div className="h-3 bg-muted rounded w-1/4"></div>
@@ -311,9 +335,6 @@ export default function DashboardPage() { // Renamed component for clarity
           </Card>
         </div>
       </div>
-
-      {/* Separator removed as the card structure provides enough separation */}
-      {/* <Separator className="my-8" /> */}
     </div>
   );
 }

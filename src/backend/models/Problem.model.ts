@@ -11,6 +11,7 @@ export interface Problem extends Document{
     options:string[];
     correctOption:string;
     imageUrl?: string;
+    ispublished: boolean;
 }
 const ProblemSchema: Schema<Problem> = new Schema({
     title:{
@@ -55,6 +56,10 @@ const ProblemSchema: Schema<Problem> = new Schema({
     imageUrl: {         
         type: String,
         required: false 
+    },
+    ispublished: {
+        type: Boolean,
+        default: false
     }
 });
 const ProblemModel = (mongoose.models.Problem as mongoose.Model<Problem>) || mongoose.model<Problem>("Problem",ProblemSchema);

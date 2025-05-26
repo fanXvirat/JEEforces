@@ -27,6 +27,7 @@ export async function POST(request: Request) {
             options: data.options,
             correctOption: data.correctOption,
             imageUrl: data.imageUrl || null,
+            ispublished: false
         });
 
         return Response.json(newProblem, { status: 201 });
@@ -38,11 +39,18 @@ export async function POST(request: Request) {
 }
 export async function GET(request: Request) {
     await dbConnect();
-  
+    const session = await getServerSession(authOptions);
+    const user: User | undefined = session?.user;
     try {
       const { searchParams } = new URL(request.url);
       const query: any = {};
-      
+      const forContestCreation = searchParams.get('forContestCreation') === 'true';
+      if (user?.role !== 'admin') {
+            // Non-admins only see published problems, unless specifically for a published contest (handled by /api/contests/[id])
+            query.ispublished = true;
+        } else {
+            // Admins can see all problems. No `ispublished` filter here.
+        }
       // Add filters if needed
       const difficulty = searchParams.get('difficulty');
       const subject = searchParams.get('subject');
@@ -59,7 +67,16 @@ export async function GET(request: Request) {
             { tags: { $regex: searchRegex } }
         ];
     }
-      const problems = await ProblemModel.find(query, "_id title difficulty score tags subject")
+      let selectFields: string;
+      if (forContestCreation) {
+            // For contest creation problem selection, only _id and title are needed
+            selectFields = "_id title";
+      } 
+      else {
+            // For general problems list, return common details (including ispublished for admins)
+            selectFields = "_id title difficulty score tags subject ispublished";
+      }
+      const problems = await ProblemModel.find(query, selectFields)
         .sort({ createdAt: -1 }); // Newest first
   
       return Response.json(problems); // Return direct array

@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 import { use } from 'react'; // Assuming 'use' hook is correctly implemented/imported
 import Link from 'next/link';
-import Image from 'next/image'; // Import Next.js Image for potential optimization
+import Image from 'next/image';
 
 interface Problem {
     _id: string;
@@ -18,8 +18,8 @@ interface Problem {
     description: string;
     options: string[];
     subject: string;
-    score: number; // Keep score if needed elsewhere, though not displayed here
-    imageUrl?: string; // Already included, good!
+    score: number;
+    imageUrl?: string;
 }
 
 interface Contest {
@@ -30,19 +30,18 @@ interface Contest {
     problems: Problem[];
 }
 
-// Component Props Type
 interface ContestPageProps {
-     params: Promise<{ id: string }>; // Using Promise for params as per original code
+     params: Promise<{ id: string }>;
 }
 
 export default function ContestPage({ params }: ContestPageProps) {
-    const { data: session, status: authStatus } = useSession(); // Get auth status
+    const { data: session, status: authStatus } = useSession();
     const router = useRouter();
-    const unwrappedParams = use(params); // Unwrap the promise
-    const contestId = unwrappedParams.id; // Get the ID
+    const unwrappedParams = use(params);
+    const contestId = unwrappedParams.id;
 
     const [contest, setContest] = useState<Contest | null>(null);
-    const [submissions, setSubmissions] = useState<Record<string, string>>({});
+    const [submissions, setSubmissions] = useState<Record<string, string>>({}); // This holds the selected options
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [hasFinalSubmission, setHasFinalSubmission] = useState(false);
@@ -51,11 +50,11 @@ export default function ContestPage({ params }: ContestPageProps) {
     const startTime = contest ? new Date(contest.startTime) : null;
     const endTime = contest ? new Date(contest.endTime) : null;
     const isActive = contest && startTime && endTime && now >= startTime && now <= endTime;
-    const isEnded = contest && endTime && now > endTime; // Added for clarity
+    const isEnded = contest && endTime && now > endTime;
 
     // Group problems by subject (case-insensitive)
     const groupedProblems = contest?.problems.reduce((acc, problem) => {
-        const subject = problem.subject?.toLowerCase() || 'other'; // Handle potential missing subject
+        const subject = problem.subject?.toLowerCase() || 'other';
         if (!acc[subject]) acc[subject] = [];
         acc[subject].push(problem);
         return acc;
@@ -64,51 +63,76 @@ export default function ContestPage({ params }: ContestPageProps) {
     // Filter subjects based on available problems
     const availableSubjects = groupedProblems ? Object.keys(groupedProblems) : [];
 
+    // Derive localStorage key
+    const localStorageKey = session?.user?._id && contestId
+        ? `contest-${contestId}-${session.user._id}-draftSubmissions`
+        : null;
+
+    // Effect to fetch data and load draft submissions
     useEffect(() => {
         const fetchData = async () => {
-            setIsLoading(true); // Ensure loading starts
+            setIsLoading(true);
             try {
-                // Ensure contestId is available before fetching
                 if (!contestId) {
                     toast.error('Contest ID not found.');
                     setIsLoading(false);
                     return;
                 }
 
-                // Fetch contest details first
+                // 1. Fetch contest details
                 const contestRes = await axios.get(`/api/contests/${contestId}`);
                 setContest(contestRes.data);
 
-                // Fetch final submissions only after ensuring user session exists
-                if (session?.user?._id) {
-                    try {
-                        const submissionsRes = await axios.get(`/api/submissions?contestId=${contestId}&userId=${session.user._id}&IsFinal=true`);
-                        if (submissionsRes.data && submissionsRes.data.length > 0) {
-                            setHasFinalSubmission(true);
-                            // Load existing final answers if needed for display (though maybe not needed if inputs are disabled)
-                            const subs = submissionsRes.data.reduce((acc: Record<string, string>, sub: any) => {
-                                acc[sub.problem._id] = sub.selectedOptions[0]; // Assuming single option selection
-                                return acc;
-                            }, {});
-                            setSubmissions(subs);
-                        } else {
-                            setHasFinalSubmission(false); // Explicitly set to false if no final subs found
+                // Ensure session user ID is available for localStorage key and API calls
+                if (!session?.user?._id) {
+                    // If no session user, we can't load/save drafts specific to them
+                    // and cannot check for final submissions.
+                    setHasFinalSubmission(false); // No user, no final submission check
+                    setIsLoading(false);
+                    return;
+                }
+
+                // 2. Try to load existing draft submissions from localStorage
+                if (localStorageKey) {
+                    const savedDrafts = localStorage.getItem(localStorageKey);
+                    if (savedDrafts) {
+                        try {
+                            const parsedDrafts = JSON.parse(savedDrafts);
+                            // Only set if valid object
+                            if (typeof parsedDrafts === 'object' && parsedDrafts !== null) {
+                                setSubmissions(parsedDrafts);
+                            }
+                        } catch (e) {
+                            console.error("Error parsing saved drafts from localStorage:", e);
+                            localStorage.removeItem(localStorageKey); // Clear corrupted data
                         }
-                    } catch (subError) {
-                        console.error("Error fetching submissions:", subError);
-                        // Decide how to handle submission fetch error - maybe allow attempt?
-                        // toast.warning('Could not load previous submission status.');
-                        setHasFinalSubmission(false); // Assume no final submission on error
                     }
-                } else {
-                    // No session, cannot check for final submissions
-                    setHasFinalSubmission(false);
+                }
+
+                // 3. Fetch final submissions (will overwrite drafts if a final one exists)
+                try {
+                    const submissionsRes = await axios.get(`/api/submissions?contestId=${contestId}&userId=${session.user._id}&IsFinal=true`);
+                    if (submissionsRes.data && submissionsRes.data.length > 0) {
+                        setHasFinalSubmission(true);
+                        // If a final submission exists, its values *should* overwrite any drafts
+                        const finalSubs = submissionsRes.data.reduce((acc: Record<string, string>, sub: any) => {
+                            acc[sub.problem._id] = sub.selectedOptions[0]; // Assuming single option selection
+                            return acc;
+                        }, {});
+                        setSubmissions(finalSubs); // Final submission takes precedence
+                    } else {
+                        setHasFinalSubmission(false); // Explicitly set to false if no final subs found
+                    }
+                } catch (subError) {
+                    console.error("Error fetching submissions:", subError);
+                    toast.warning('Could not load previous submission status.');
+                    setHasFinalSubmission(false); // Assume no final submission on error
                 }
 
             } catch (error) {
                 console.error("Error fetching contest data:", error);
                 toast.error('Failed to load contest data.');
-                setContest(null); // Reset contest on error
+                setContest(null);
             } finally {
                 setIsLoading(false);
             }
@@ -118,10 +142,19 @@ export default function ContestPage({ params }: ContestPageProps) {
         if (contestId && authStatus !== 'loading') {
             fetchData();
         } else if (authStatus !== 'loading' && !contestId) {
-            setIsLoading(false); // No ID, stop loading
+            setIsLoading(false);
         }
 
     }, [contestId, session, authStatus]); // Add dependencies
+
+    // Effect to save draft submissions to localStorage whenever `submissions` state changes
+    useEffect(() => {
+        if (localStorageKey && isActive && !hasFinalSubmission && Object.keys(submissions).length > 0) {
+            // Only save if contest is active and no final submission has been made
+            localStorage.setItem(localStorageKey, JSON.stringify(submissions));
+            // console.log("Drafts saved to localStorage:", submissions); // For debugging
+        }
+    }, [submissions, isActive, hasFinalSubmission, localStorageKey]); // Add all dependencies
 
     const handleOptionSelect = (problemId: string, option: string) => {
         // Only allow selection if contest is active and no final submission made
@@ -133,34 +166,41 @@ export default function ContestPage({ params }: ContestPageProps) {
     const handleFinalSubmit = async () => {
         if (!contest || isSubmitting || hasFinalSubmission || !isActive) return;
 
-        // Confirmation dialog
         const confirmed = window.confirm("Are you sure you want to submit? You cannot change your answers after this.");
         if (!confirmed) return;
-
 
         setIsSubmitting(true);
         try {
             const submissionData = Object.entries(submissions).map(([problemId, option]) => ({
                 problemId,
                 contestId: contest._id,
-                selectedOptions: [option], // Ensure it's an array
+                selectedOptions: [option],
             }));
 
-            // Make sure user ID is included if required by the backend endpoint
             await axios.post('/api/submissions/final', {
-                userId: session?.user?._id, // Pass userId if needed
+                userId: session?.user?._id,
                 submissions: submissionData
             });
 
             setHasFinalSubmission(true);
             toast.success('Final submission successful!');
+
+            // Clear draft submissions from localStorage after successful final submission
+            if (localStorageKey) {
+                localStorage.removeItem(localStorageKey);
+            }
+
             router.push(`/contests/${contest._id}/standings`);
 
         } catch (error: any) {
              console.error("Final Submission Error:", error.response?.data || error.message);
             if (error.response?.data?.error === "You have already made a final submission") {
-                setHasFinalSubmission(true); // Sync state if server says already submitted
+                setHasFinalSubmission(true);
                 toast.error(error.response.data.error);
+                // If backend confirms final submission, also clear local drafts
+                if (localStorageKey) {
+                    localStorage.removeItem(localStorageKey);
+                }
             } else {
                 toast.error(`Submission failed: ${error.response?.data?.message || 'Please try again.'}`);
             }
@@ -169,11 +209,9 @@ export default function ContestPage({ params }: ContestPageProps) {
         }
     };
 
-    // Loading States
     if (authStatus === 'loading' || isLoading) {
         return <div className="flex justify-center items-center h-screen"><Loader2 className="h-12 w-12 animate-spin text-blue-600" /></div>;
     }
-     // No Session
      if (!session) {
         return (
             <div className="flex flex-col items-center justify-center h-screen">
@@ -184,13 +222,9 @@ export default function ContestPage({ params }: ContestPageProps) {
             </div>
         );
     }
-
-    // Contest Fetch Failed
     if (!contest) {
         return <div className="text-center mt-10 text-red-500 font-semibold">Contest not found or failed to load.</div>;
     }
-
-    // Contest Not Started Yet
     if (startTime && now < startTime) {
         return (
             <div className="container mx-auto p-6 text-center">
@@ -203,7 +237,6 @@ export default function ContestPage({ params }: ContestPageProps) {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{contest.title}</h1>
@@ -217,12 +250,11 @@ export default function ContestPage({ params }: ContestPageProps) {
                     <Link href={`/contests/${contest._id}/standings`}>
                        <Button variant="outline">View Standings</Button>
                     </Link>
-                    {/* Show submit button only if active */}
                     {isActive && (
                         <Button
                             onClick={handleFinalSubmit}
-                            disabled={isSubmitting || hasFinalSubmission || !isActive} // Redundant isActive check, but safe
-                            className={hasFinalSubmission ? 'bg-gray-400 hover:bg-gray-400' : ''} // Style disabled button
+                            disabled={isSubmitting || hasFinalSubmission || !isActive}
+                            className={hasFinalSubmission ? 'bg-gray-400 hover:bg-gray-400' : ''}
                         >
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {hasFinalSubmission ? 'Submitted' : 'Final Submit'}
@@ -237,7 +269,6 @@ export default function ContestPage({ params }: ContestPageProps) {
                 </div>
             </div>
 
-            {/* Final Submission Notice */}
             {hasFinalSubmission && isActive && (
                 <div className="mb-6 p-3 bg-accent text-accent-foreground rounded-md text-sm border">
                     You have already made your final submission. Changes are no longer saved. View standings after the contest ends.
@@ -249,15 +280,12 @@ export default function ContestPage({ params }: ContestPageProps) {
                 </div>
             )}
 
-
-            {/* Tabs for Subjects */}
             {availableSubjects.length > 0 ? (
                 <Tabs defaultValue={availableSubjects[0]} className="w-full">
                     <TabsList className={` w-full grid-cols-${availableSubjects.length} mb-8 bg-muted`}>
                         {availableSubjects.includes('physics') && <TabsTrigger value="physics">Physics</TabsTrigger>}
                         {availableSubjects.includes('chemistry') && <TabsTrigger value="chemistry">Chemistry</TabsTrigger>}
                         {availableSubjects.includes('mathematics') && <TabsTrigger value="mathematics">Mathematics</TabsTrigger>}
-                        {/* Add other potential subjects if needed */}
                         {availableSubjects.filter(s => !['physics', 'chemistry', 'mathematics'].includes(s)).map(subject => (
                              <TabsTrigger key={subject} value={subject} className="capitalize">{subject}</TabsTrigger>
                         ))}
@@ -265,49 +293,41 @@ export default function ContestPage({ params }: ContestPageProps) {
 
                     {Object.entries(groupedProblems || {}).map(([subject, problems]) => (
                         <TabsContent key={subject} value={subject}>
-                            <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"> {/* Adjusted grid for potentially wider cards */}
+                            <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
                                 {problems.map((problem, index) => (
-                                    <Card key={problem._id} className="flex flex-col"> {/* Added flex flex-col */}
+                                    <Card key={problem._id} className="flex flex-col">
                                         <CardHeader>
-                                            {/* Added Problem Number */}
                                             <CardTitle className="text-lg">
                                                 {`Problem ${index + 1}: ${problem.title}`}
                                             </CardTitle>
                                         </CardHeader>
-                                        <CardContent className="flex-grow space-y-4"> {/* Added flex-grow and space-y */}
-                                            {/* Problem Image */}
+                                        <CardContent className="flex-grow space-y-4">
                                             {problem.imageUrl && (
                                                 <div className="mb-4 border rounded-md bg-muted/40 flex justify-center">
-                                                    <Image // Using Next.js Image
+                                                    <Image
                                                         src={problem.imageUrl}
                                                         alt={`Illustration for ${problem.title}`}
-                                                        width={400} // Provide appropriate width
-                                                        height={300} // Provide appropriate height
+                                                        width={400}
+                                                        height={300}
                                                         className="object-contain max-h-[300px] rounded"
-                                                        priority={index < 3} // Prioritize loading first few images
+                                                        priority={index < 3}
                                                     />
                                                 </div>
                                             )}
-
-                                            {/* Problem Description */}
-                                            {/* Use prose for potential markdown/html, limit lines */}
                                             <div className="prose prose-sm max-w-none text-muted-foreground">
-                                                <p>{problem.description}</p> {/* Render description safely */}
+                                                <p>{problem.description}</p>
                                             </div>
-
-                                            {/* Options */}
                                             <div className="space-y-2 pt-2">
                                                 {problem.options.map((option, optIndex) => (
                                                     <Button
                                                         key={optIndex}
                                                         variant={submissions[problem._id] === option ? 'default' : 'outline'}
-                                                        className="w-full text-left justify-start h-auto py-2 whitespace-normal border" // Allow text wrapping
+                                                        className="w-full text-left justify-start h-auto py-2 whitespace-normal border"
                                                         onClick={() => handleOptionSelect(problem._id, option)}
-                                                        disabled={!isActive || hasFinalSubmission} // Disable options based on state
+                                                        disabled={!isActive || hasFinalSubmission}
                                                         aria-pressed={submissions[problem._id] === option}
                                                     >
                                                         <span className="font-medium mr-2 text-foreground">{String.fromCharCode(65 + optIndex)}.</span>
-                                                        {/* Render option text safely */}
                                                         <span>{option}</span>
                                                     </Button>
                                                 ))}
