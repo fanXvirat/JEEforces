@@ -300,9 +300,9 @@ export default function ContestPage({ params }: ContestPageProps) {
                                                     />
                                                 </div>
                                             )}
-                                            <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
+                                            <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: problem.description }}>
                                                 {/* Using dangerouslySetInnerHTML for HTML content if needed, or just <p> for plain text */}
-                                                <p>{problem.description}</p>
+                                                
                                             </div>
                                             <div className="space-y-2 pt-2">
                                                 {problem.options.map((option, optIndex) => (
