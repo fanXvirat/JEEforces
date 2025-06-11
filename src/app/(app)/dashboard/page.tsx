@@ -14,7 +14,6 @@ import { RatingChart } from '@/components/rating-chart';
 import { getTitleColor } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQueries } from '@tanstack/react-query';
-
 // Define interfaces for each API's expected response
 interface UserProfileResponse {
   _id: string;

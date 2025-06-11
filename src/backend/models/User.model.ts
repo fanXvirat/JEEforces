@@ -36,6 +36,8 @@ export interface User extends Document{
     createdAt:Date;
     updatedAt:Date;
     isVerified:boolean;
+    verifyToken?: string; // Optional for email verification
+    verifyTokenExp?: Date; // Optional for email verification
 }
 const UserSchema: Schema<User> = new Schema(
     {
@@ -96,6 +98,14 @@ const UserSchema: Schema<User> = new Schema(
       isVerified: {
         type: Boolean,
         default: false,
+      },
+      verifyToken: {
+        type: String,
+        default: undefined, // Optional for email verification
+      },
+      verifyTokenExp: {
+        type: Date,
+        default: undefined, // Optional for email verification
       },
     },
     { timestamps: true } // Automatically adds createdAt and updatedAt

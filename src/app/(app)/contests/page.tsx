@@ -102,14 +102,12 @@ export default function ContestListPage() {
         } finally {
             if (showLoading) setIsLoading(false);
         }
-    }, []);
+    }, [user?.role]);
 
     useEffect(() => {
-        if (status === 'authenticated') {
+        if (status !== 'loading') {
             fetchContests();
-        } else if (status === 'unauthenticated') {
-            setIsLoading(false);
-        }
+        } 
     }, [status, fetchContests]);
 
     const handleRegister = async (contestId: string) => {
@@ -192,7 +190,26 @@ export default function ContestListPage() {
 
 
     const renderContestButton = (contest: Contest) => {
-        if (!user?._id) return null;
+        if (!user?._id) {
+            // For guests, we can show a "View Details" or "Login to Register" button
+            const { status } = getContestStatus(contest.startTime, contest.endTime);
+            if (status === 'ended') {
+                 return (
+                    <Button
+                        className="w-full"
+                        variant="secondary"
+                        onClick={() => router.push(`/contests/${contest._id}/standings`)}
+                    >
+                        <BarChartHorizontal className="mr-2 h-4 w-4" /> View Results
+                    </Button>
+                );
+            }
+            return (
+                <Button className="w-full" onClick={() => router.push(`/contests/${contest._id}`)}>
+                    View Contest
+                </Button>
+            );
+        }
 
         const { status } = getContestStatus(contest.startTime, contest.endTime);
         const userIdString = user._id.toString();
@@ -244,7 +261,7 @@ export default function ContestListPage() {
         }
     };
 
-    if (status === 'loading' || (status === 'authenticated' && isLoading)) {
+    if (status === 'loading' || isLoading) {
         return (
             <div className="container mx-auto px-4 py-8 md:py-12">
                  <div className="flex justify-between items-center mb-8">
@@ -259,13 +276,6 @@ export default function ContestListPage() {
         );
     }
 
-    if (status === 'unauthenticated') {
-        return (
-            <div className="container mx-auto px-4 py-8 md:py-12 text-center mt-10">
-                <p className="text-lg mb-4">Please <Link href="/sign-in" className="text-primary font-semibold hover:underline">Sign In</Link> to view and participate in contests.</p>
-            </div>
-        );
-    }
 
     return (
         <div className="container mx-auto px-4 py-8 md:py-12">

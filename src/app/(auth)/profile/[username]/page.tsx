@@ -40,7 +40,7 @@ const profileUpdateSchema = z.object({
   yearofstudy: z
     .number({ invalid_type_error: "Year must be a number" })
     .min(1, { message: "Year of study must be at least 1" })
-    .max(10, { message: "Year of study seems too high" }),
+    .max(14, { message: "Year of study seems too high" }),
 });
 
 type ProfileUpdateType = z.infer<typeof profileUpdateSchema>;
@@ -152,9 +152,7 @@ export default function ProfileCompletionPage({ params }: ProfileCompletionPageP
                       document.body.style.overflow = 'auto';
                     }}
                   >
-                    <Button type="button" variant="outline">
-                      {avatarUrl ? "Change Avatar" : "Upload Avatar"}
-                    </Button>
+                    {avatarUrl ? "Change Avatar" : "Upload Avatar"}
                   </CldUploadButton>
                 ) : (
                   <p className="text-destructive text-sm">Upload configuration missing.</p>

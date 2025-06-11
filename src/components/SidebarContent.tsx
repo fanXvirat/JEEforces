@@ -149,9 +149,9 @@ export function SidebarContent({ isCollapsed = false }: { isCollapsed?: boolean 
         const res = await axios.get<{ leaderboard: LeaderboardUser[] }>('/api/leaderboard?limit=5&forSidebar=true');
         return res.data.leaderboard;
     };
-
+    const userId = user?._id ?? 'guest';
     const { data: contests = [], isLoading: isLoadingContests, isFetching: isFetchingContests } = useQuery<Contest[]>({
-        queryKey: ['sidebarContests'],
+        queryKey: ['sidebarContests',userId],
         queryFn: fetchContests,
         refetchInterval: 60000,
         staleTime: 30000,
@@ -160,14 +160,14 @@ export function SidebarContent({ isCollapsed = false }: { isCollapsed?: boolean 
     });
 
     const { data: discussions = [], isLoading: isLoadingDiscussions, isFetching: isFetchingDiscussions } = useQuery<Discussion[]>({
-        queryKey: ['sidebarDiscussions'],
+        queryKey: ['sidebarDiscussions',userId],
         queryFn: fetchDiscussions,
         refetchInterval: 60000,
         staleTime: 30000,
     });
 
     const { data: leaderboard = [], isLoading: isLoadingLeaderboard, isFetching: isFetchingLeaderboard } = useQuery<LeaderboardUser[]>({
-        queryKey: ['sidebarLeaderboard'],
+        queryKey: ['sidebarLeaderboard',userId],
         queryFn: fetchLeaderboard,
         refetchInterval: 60000,
         staleTime: 30000,

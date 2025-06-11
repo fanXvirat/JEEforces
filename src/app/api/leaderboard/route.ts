@@ -21,9 +21,7 @@ export async function GET(request: Request) {
 
   // IMPORTANT: If you want the full leaderboard to be public, remove this check.
   // Otherwise, it remains restricted to logged-in users.
-  if (!session || !user) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  
 
   try {
     // Parse query parameters

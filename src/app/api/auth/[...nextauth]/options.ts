@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/dbConnect';
 import UserModel from '@/backend/models/User.model';
+import GoogleProvider from 'next-auth/providers/google';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -41,6 +42,9 @@ export const authOptions: NextAuthOptions = {
           if (!isPasswordCorrect) {
             throw new Error('Incorrect password');
           }
+          if (!user.isVerified) {
+            throw new Error("Please verify your email before signing in");
+          }
 
           // Return user object without the password
           return {
@@ -56,8 +60,13 @@ export const authOptions: NextAuthOptions = {
         }
       },
     }),
+    GoogleProvider({
+      clientId:     process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
   ],
   callbacks: {
+    
     async jwt({ token, user }) {
       if (user) {
         token._id = user._id; // Add user ID to the token

@@ -9,9 +9,7 @@ export async function GET(request: Request) {
     await dbConnect();
     const session = await getServerSession(authOptions);
 
-    if (!session) {
-        return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    
 
     try {
         // Extract contestId from URL
