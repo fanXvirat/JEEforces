@@ -10,7 +10,6 @@ import { Sidebar } from "@/components/Sidebar";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider"; 
 import QueryProvider from "@/context/query-provider";
-
 const geistSans = Geist({
   subsets: ["latin"],
   variable: "--font-geist-sans",

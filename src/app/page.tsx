@@ -16,12 +16,12 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { VoteButtons } from '@/components/Upvote';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge'; // Badge is imported but not used in the provided snippet.
+import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from 'next/link';
 import { getTitleColor } from '@/lib/utils';
 import { Balancer } from 'react-wrap-balancer';
-
+import { CoolerHeroSection } from '@/components/HeroSection';
 interface Discussion {
   _id: string;
   title: string;
@@ -38,7 +38,6 @@ interface Discussion {
   isFeatured: boolean;
 }
 
-// Helper to get initials from username
 const getInitials = (name: string = '') => {
   return name
     .split(' ')
@@ -46,6 +45,15 @@ const getInitials = (name: string = '') => {
     .slice(0, 2)
     .join('');
 };
+
+// --- NEW: Phrases for the animated hero title ---
+const heroTitles = [
+    "Master JEE with Peer Power",
+    "Compete in Rated Contests",
+    "Solve Story-Based Problems",
+    "From Mains to Olympiads",
+    "Conquer Physics, Chem & Maths"
+];
 
 export default function HomePage() {
   const { data: session } = useSession();
@@ -57,6 +65,18 @@ export default function HomePage() {
     problems: 0,
     users: 0,
   });
+
+  // --- NEW: State for the animation ---
+  const [currentTitleIndex, setCurrentTitleIndex] = useState(0);
+
+  // --- NEW: useEffect hook to handle the title animation ---
+  useEffect(() => {
+    const interval = setInterval(() => {
+        setCurrentTitleIndex(prevIndex => (prevIndex + 1) % heroTitles.length);
+    }, 3000); // Switch text every 3 seconds
+
+    return () => clearInterval(interval); // Cleanup on component unmount
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -86,6 +106,7 @@ export default function HomePage() {
   }, []);
 
   const toggleFeature = async (id: string) => {
+    // ... (This function remains unchanged)
     try {
       const originalDiscussions = [...featuredDiscussions];
       setFeaturedDiscussions(prev =>
@@ -112,41 +133,17 @@ export default function HomePage() {
   }
 
   return (
+    <main>
     <div className="container mx-auto px-4 py-8 md:py-12">
-      {/* Hero Section */}
-      <section className="text-center py-20 md:py-28 mb-16 md:mb-24 bg-gradient-to-br from-primary via-primary/80 to-secondary rounded-2xl text-primary-foreground shadow-lg overflow-hidden relative">
-         <div className="relative z-10 px-4"> {/* Added px-4 for smaller screens */}
-            <h1 className="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight">
-               <Balancer>Master JEE with Peer Power</Balancer>
-            </h1>
-            <p className="text-lg md:text-xl mb-10 max-w-3xl mx-auto text-primary-foreground/90">
-               <Balancer>
-               Join India's largest community for JEE preparation - Solve challenging problems, engage in discussions, and conquer the exam together.
-               </Balancer>
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-               <Link href="/problems">
-                  <Button size="lg" className="w-full sm:w-auto bg-background text-primary hover:bg-background/90 transition-colors duration-200 font-semibold shadow-md">
-                     <Rocket className="mr-2 h-5 w-5" />
-                     Start Practicing
-                  </Button>
-               </Link>
-               <Link href="/sign-up">
-                  <Button size="lg" variant="outline" className="w-full sm:w-auto text-primary border-primary-foreground/50 hover:bg-primary-foreground/10 transition-colors duration-200 font-semibold shadow-md">
-                     <Users className="mr-2 h-5 w-5" />
-                     Join the Community
-                  </Button>
-               </Link>
-            </div>
-         </div>
-      </section>
+      {/* --- MODIFIED: Hero Section with Animated Title --- */}
+      <CoolerHeroSection />
 
-      {/* Featured Discussions Grid */}
+      {/* --- The rest of your page remains unchanged --- */}
       <section className="mb-16 md:mb-24">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 px-4 sm:px-0"> {/* Added px-4 for smaller screens */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 px-4 sm:px-0">
           <div className="flex items-center gap-3 mb-4 sm:mb-0">
              <Megaphone className="h-8 w-8 text-primary" />
-             <h2 className="text-2xl md:text-3xl font-bold tracking-tight"> {/* Adjusted heading size for better mobile fit */}
+             <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
                 Announcements & Pinned Posts
              </h2>
           </div>
@@ -160,7 +157,7 @@ export default function HomePage() {
         </div>
 
         {featuredDiscussions.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"> {/* Explicitly set grid-cols-1 for mobile */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {featuredDiscussions.map((discussion) => (
               <Card key={discussion._id} className="relative group hover:shadow-lg hover:border-primary/50 transition-all duration-200 flex flex-col">
                 {session?.user?.role === 'admin' && (
@@ -180,7 +177,7 @@ export default function HomePage() {
                   </div>
                 )}
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-base sm:text-lg font-semibold leading-snug mb-2 pr-10"> {/* Adjusted title size for smaller screens */}
+                  <CardTitle className="text-base sm:text-lg font-semibold leading-snug mb-2 pr-10">
                       <Link href={`/discussions/${discussion._id}`} className="hover:text-primary transition-colors duration-200 line-clamp-2">
                         {discussion.title}
                       </Link>
@@ -227,13 +224,12 @@ export default function HomePage() {
             ))}
           </div>
         ) : (
-            <div className="text-center text-muted-foreground py-10 border rounded-lg mx-4 sm:mx-0"> {/* Added mx-4 for smaller screens */}
+            <div className="text-center text-muted-foreground py-10 border rounded-lg mx-4 sm:mx-0">
                 No announcements or pinned posts found.
             </div>
         )}
       </section>
 
-      {/* Quick Stats */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
         <Card className="text-center hover:shadow-md transition-shadow duration-200">
           <CardHeader className="items-center pb-2">
@@ -241,7 +237,7 @@ export default function HomePage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Contests Hosted</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl sm:text-4xl font-bold">{stats.contests}</div> {/* Adjusted size for smaller screens */}
+            <div className="text-3xl sm:text-4xl font-bold">{stats.contests}</div>
           </CardContent>
         </Card>
         <Card className="text-center hover:shadow-md transition-shadow duration-200">
@@ -250,7 +246,7 @@ export default function HomePage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Practice Problems</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl sm:text-4xl font-bold">{stats.problems}</div> {/* Adjusted size for smaller screens */}
+            <div className="text-3xl sm:text-4xl font-bold">{stats.problems}</div>
           </CardContent>
         </Card>
         <Card className="text-center hover:shadow-md transition-shadow duration-200">
@@ -259,10 +255,11 @@ export default function HomePage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Registered Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl sm:text-4xl font-bold">{stats.users}</div> {/* Adjusted size for smaller screens */}
+            <div className="text-3xl sm:text-4xl font-bold">{stats.users}</div>
           </CardContent>
         </Card>
       </section>
     </div>
+    </main>
   );
 }
