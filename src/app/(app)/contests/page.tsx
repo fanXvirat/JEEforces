@@ -3,7 +3,7 @@ import { useSession } from 'next-auth/react';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import axios, { AxiosError } from 'axios';
-import { Loader2, RefreshCcw, Trophy, PlusCircle, Users, BarChartHorizontal, LogIn, CheckCheck, CalendarClock, Eye, EyeOff } from 'lucide-react';
+import { Loader2, RefreshCcw, Trophy, PlusCircle, Users, BarChartHorizontal, LogIn, CheckCheck, CalendarClock, Eye, EyeOff, BookOpenCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import {
     Card,
@@ -102,7 +102,7 @@ export default function ContestListPage() {
         } finally {
             if (showLoading) setIsLoading(false);
         }
-    }, [user?.role]);
+    }, []);
 
     useEffect(() => {
         if (status !== 'loading') {
@@ -110,6 +110,7 @@ export default function ContestListPage() {
         } 
     }, [status, fetchContests]);
 
+    // ... (keep handleRegister, handleUpdateRatings, handleTogglePublish, handleReleaseProblems as they are) ...
     const handleRegister = async (contestId: string) => {
         if (!user?._id || isRegistering) return;
         setIsRegistering(contestId);
@@ -191,21 +192,8 @@ export default function ContestListPage() {
 
     const renderContestButton = (contest: Contest) => {
         if (!user?._id) {
-            // For guests, we can show a "View Details" or "Login to Register" button
-            const { status } = getContestStatus(contest.startTime, contest.endTime);
-            if (status === 'ended') {
-                 return (
-                    <Button
-                        className="w-full"
-                        variant="secondary"
-                        onClick={() => router.push(`/contests/${contest._id}/standings`)}
-                    >
-                        <BarChartHorizontal className="mr-2 h-4 w-4" /> View Results
-                    </Button>
-                );
-            }
             return (
-                <Button className="w-full" onClick={() => router.push(`/contests/${contest._id}`)}>
+                 <Button className="w-full" onClick={() => router.push(`/contests/${contest._id}`)}>
                     View Contest
                 </Button>
             );
@@ -233,28 +221,34 @@ export default function ContestListPage() {
                     </Button>
                 );
             case 'running':
-                if (isRegistered) {
-                    return (
-                        <Button className="w-full" onClick={() => router.push(`/contests/${contest._id}`)}>
-                            <LogIn className="mr-2 h-4 w-4" /> Enter Contest
-                        </Button>
-                    );
-                } else {
-                    return (
-                        <Button className="w-full" disabled variant="secondary">
-                            Registration Closed
-                        </Button>
-                    );
-                }
-            case 'ended':
-                return (
-                    <Button
-                        className="w-full"
-                        variant="secondary"
-                        onClick={() => router.push(`/contests/${contest._id}/standings`)}
-                    >
-                        <BarChartHorizontal className="mr-2 h-4 w-4" /> View Results
+                return isRegistered ? (
+                    <Button className="w-full" onClick={() => router.push(`/contests/${contest._id}`)}>
+                        <LogIn className="mr-2 h-4 w-4" /> Enter Contest
                     </Button>
+                ) : (
+                    <Button className="w-full" disabled variant="secondary">
+                        Registration Closed
+                    </Button>
+                );
+            case 'ended':
+                 // *** MODIFIED SECTION ***
+                return (
+                    <div className="flex flex-col sm:flex-row gap-2 w-full">
+                         <Button
+                            className="flex-1"
+                            variant="secondary"
+                            onClick={() => router.push(`/contests/${contest._id}`)}
+                        >
+                            <BookOpenCheck className="mr-2 h-4 w-4" /> Review / Retake
+                        </Button>
+                        <Button
+                            className="flex-1"
+                            variant="outline"
+                            onClick={() => router.push(`/contests/${contest._id}/standings`)}
+                        >
+                            <BarChartHorizontal className="mr-2 h-4 w-4" /> Standings
+                        </Button>
+                    </div>
                 );
             default:
                 return null;
@@ -269,7 +263,7 @@ export default function ContestListPage() {
                     <Skeleton className="h-10 w-10 rounded-full" />
                  </div>
                  {session?.user?.role === 'admin' && <Skeleton className="h-10 w-40 mb-8 rounded" />}
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"> {/* Explicitly set grid-cols-1 for mobile, sm:grid-cols-2 for smaller tablets */}
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {[...Array(6)].map((_, i) => <ContestCardSkeleton key={i} />)}
                 </div>
             </div>
@@ -289,7 +283,6 @@ export default function ContestListPage() {
                         <Link href="/contests/create">
                             <Button variant="outline">
                                 <PlusCircle className="mr-2 h-4 w-4" />
-                                {/* Added responsive text for Create Contest button */}
                                 <span className="hidden sm:inline">Create Contest</span>
                                 <span className="inline sm:hidden">New</span>
                             </Button>
@@ -314,7 +307,7 @@ export default function ContestListPage() {
                     {user?.role === 'admin' && <p className="mt-2">You can create a new one!</p>}
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"> {/* Explicitly setting grid-cols-1 for mobile, sm:grid-cols-2 for smaller tablets */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {contests.map((contest) => {
                         const { status, variant, className: badgeClassName, text: statusText } = getContestStatus(contest.startTime, contest.endTime);
                         const isEnded = status === 'ended';
@@ -326,7 +319,6 @@ export default function ContestListPage() {
                                 <div>
                                     <CardHeader className="pb-3">
                                         <div className="flex justify-between items-start gap-2 mb-1">
-                                            {/* Adjusted title size for smaller screens */}
                                             <CardTitle className="text-base sm:text-lg leading-tight">{contest.title}</CardTitle>
                                             <Badge variant={variant} className={cn("text-xs whitespace-nowrap mt-0.5", badgeClassName)}>
                                                 {statusText}
@@ -349,7 +341,6 @@ export default function ContestListPage() {
                                                 <div className="flex items-center space-x-2">
                                                     <Label htmlFor={`publish-toggle-${contest._id}`} className="flex items-center text-xs gap-1 cursor-pointer">
                                                         {contest.ispublished ? <Eye className="h-3 w-3 text-green-600" /> : <EyeOff className="h-3 w-3 text-red-600" />}
-                                                        {/* Added responsive text for Publish/Draft status */}
                                                         <span className="hidden xs:inline">{contest.ispublished ? 'Published' : 'Draft'}</span>
                                                         <span className="inline xs:hidden">{contest.ispublished ? 'Pub' : 'Drf'}</span>
                                                     </Label>
