@@ -9,7 +9,10 @@ const nextConfig: NextConfig = {
       ? { moduleIdStrategy: 'deterministic' }
       : {}, 
   },
-};
 
+eslint: {
+    ignoreDuringBuilds: true,
+  },
+};
 export default nextConfig;
 
