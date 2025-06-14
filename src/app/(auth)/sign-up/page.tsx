@@ -85,7 +85,7 @@ function page() {
          <div className='w-full max-w-md p-8 space-y-0 bg-card rounded-lg shadow-md border border-border'>
             <div className='text-center'>
                <h1 className='text-4xl font-extrabold tracking-tight lg:text-5xl mb-6 text-foreground'>
-                  Join AMA
+                  Join JEEForces
                </h1>
                <p className='mb-4 text-muted-foreground'>Sign up to start your JEEForces adventure</p>
             </div>

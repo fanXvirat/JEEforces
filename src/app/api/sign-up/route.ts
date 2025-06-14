@@ -5,7 +5,8 @@ import UserModel          from "@/backend/models/User.model";
 import bcrypt             from "bcryptjs";
 import crypto             from "crypto";
 import nodemailer         from "nodemailer";
-
+import { Resend } from "resend";
+const resend = new Resend(process.env.RESEND_API_KEY);
 export async function POST(request: Request) {
   // 1) connect DB
   try {
@@ -50,26 +51,17 @@ export async function POST(request: Request) {
     console.log("✅ [sign-up] user saved:", newUser.id);
 
     // 4) validate env
-    const { EMAIL_SERVER, EMAIL_FROM, NEXTAUTH_URL } = process.env;
-    console.log({ EMAIL_SERVER, EMAIL_FROM, NEXTAUTH_URL });
-    if (!EMAIL_SERVER || !EMAIL_FROM || !NEXTAUTH_URL) {
+    const { RESEND_API_KEY, NEXTAUTH_URL } = process.env;
+    if (!RESEND_API_KEY || !NEXTAUTH_URL) {
       console.error("🔥 [sign-up] missing env-vars");
       throw new Error("Email configuration incomplete");
     }
 
     // 5) setup transporter
-    let transporter = nodemailer.createTransport(EMAIL_SERVER);
-    // **verify SMTP right now**
-    transporter.verify((error, success) => {
-      if (error) console.error("🔥 [sign-up] SMTP verify failed:", error);
-      else console.log("✅ [sign-up] SMTP server is ready");
-    });
-
-    // 6) send mail
     const verifyUrl = `${NEXTAUTH_URL}/api/auth/verify?token=${token}`;
-    await transporter.sendMail({
-      from:    EMAIL_FROM,
-      to:      email,
+    await resend.emails.send({
+      from: 'JEEForces <onboarding@resend.dev>', // Changed: Use resend.dev domain initially
+      to: email,
       subject: "Verify your JEEForces account",
       html: `
         <p>Hi ${username},</p>
