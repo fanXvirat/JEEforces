@@ -1,31 +1,29 @@
+
+
 import { Redis } from 'ioredis';
 
-let redis: Redis;
 
-declare global {
-  var _redis: Redis | undefined;
-}
-
-const isProd = process.env.NODE_ENV === 'production';
-
-const REDIS_URL = isProd
-  ? process.env.REDIS_URL
-  : process.env.LOCAL_REDIS_URL || 'redis://localhost:6379';
+const REDIS_URL = process.env.REDIS_URL;
 
 if (!REDIS_URL) {
-  throw new Error('No Redis URL found');
+  
+  throw new Error('REDIS_URL is not defined. Please check your environment variables.');
 }
 
-if (isProd) {
-  redis = new Redis(REDIS_URL);
-} else {
-  if (!global._redis) {
-    global._redis = new Redis(REDIS_URL);
-  }
-  redis = global._redis;
+
+declare global {
+  var redis: Redis | undefined;
 }
+
+
+const redis = global.redis ?? new Redis(REDIS_URL);
+
 
 redis.on('error', (err) => console.error('Redis Client Error', err));
-redis.on('connect', () => console.log('Redis connected!'));
+redis.on('connect', () => console.log('Redis connected successfully!'));
+
+if (process.env.NODE_ENV !== 'production') {
+  global.redis = redis;
+}
 
 export default redis;
