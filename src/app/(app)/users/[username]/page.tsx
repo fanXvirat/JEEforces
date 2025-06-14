@@ -1,5 +1,6 @@
 'use client';
 // Keeping all your original data fetching logic and state management intact.
+import { Flag } from 'lucide-react'; // Importing the Flag icon for reporting
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { UserType } from '@/types/User'; // Assuming UserType includes all necessary fields
@@ -220,7 +221,21 @@ export default function PublicProfile({ params }: { params: Promise<{ username: 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-8">
                     {/* Profile Info Card */}
                     <Card className="md:col-span-1">
-                        <CardHeader className="flex flex-col items-center text-center pt-6 pb-4">
+                        <CardHeader className="relative flex flex-col items-center text-center pt-6 pb-4">
+                            <div className="absolute top-2 right-2">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Link href={`/feedback?reportedUserId=${user._id}`}>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-600">
+                                                <Flag className="h-4 w-4" />
+                                            </Button>
+                                        </Link>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Report this user</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </div>
                              <Avatar className="h-20 w-20 mb-3 border-2 border-primary/50">
                                 <AvatarImage src={user.avatar} alt={user.username} />
                                 {/* Using your getInitials logic (assumed available) */}

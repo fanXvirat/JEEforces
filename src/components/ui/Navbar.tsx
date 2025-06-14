@@ -45,6 +45,7 @@ const navLinks = [
     { href: '/leaderboard', label: 'Leaderboard' },
     { href: '/discussions', label: 'Discussions' },
     { href: 'about', label: 'About' },
+    { href : '/feedback', label: 'Feedback' },
 ];
 
 export default function Navbar() {

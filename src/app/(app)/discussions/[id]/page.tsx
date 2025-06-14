@@ -16,12 +16,14 @@ import { VoteButtons } from '@/components/Upvote';
 import { VoteButtonsComment } from '@/components/Upvotecomment';
 import Link from 'next/link';
 import { getTitleColor, cn } from '@/lib/utils';
+import { Flag } from 'lucide-react'; // Import Flag icon for reporting
 
 // --- Interfaces ---
 interface Author {
     username: string;
     title?: string; // Made title optional to handle missing values
     avatar?: string;
+    _id: string;
 }
 
 interface Comment {
@@ -289,6 +291,20 @@ export default function DiscussionPage() {
                                 </Button>
                             </div>
                         </form>
+                        <div className="flex-shrink-0">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Link href={`/feedback?reportedUserId=${comment.author._id}`}>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-600">
+                                        <Flag className="h-4 w-4" />
+                                    </Button>
+                                </Link>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Report this {isReply ? 'reply' : 'comment'}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </div>
                     </div>
                 )}
 

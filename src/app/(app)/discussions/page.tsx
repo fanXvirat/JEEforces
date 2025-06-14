@@ -21,6 +21,7 @@ import { format, formatDistanceToNow } from 'date-fns'; // Added formatDistanceT
 import { VoteButtons } from '@/components/Upvote';
 import { toast } from 'sonner';
 import { getTitleColor, cn } from '@/lib/utils'; // Added cn
+import { Flag } from 'lucide-react';
 
 interface Discussion {
     _id: string;
@@ -30,6 +31,7 @@ interface Discussion {
         username: string;
         title: string;
         avatar?: string; // Make avatar optional
+        _id: string; // Added author ID for reporting
     };
     upvotes: string[];
     downvotes: string[];
@@ -267,13 +269,24 @@ export default function DiscussionsPage() {
                                             <span>{discussion.comments?.length ?? 0}</span>
                                             <span className="sr-only">comments</span>
                                         </div>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Link href={`/feedback?reportedUserId=${discussion.author._id}`}>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-600">
+                                                        <Flag className="h-4 w-4" />
+                                                    </Button>
+                                                </Link>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>Report this discussion/user</p>
+                                            </TooltipContent>
+                                        </Tooltip>
                                     </div>
                                 </CardFooter>
                             </Card>
                         ))
                     )}
                 </div>
-                {/* Optional: Add Pagination if needed */}
             </div>
         </TooltipProvider>
     );
