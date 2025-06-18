@@ -100,37 +100,55 @@ function ContestPageContent({ params }: ContestPageProps) {
             setIsLoading(true);
             try {
                 if (!contestId) { toast.error('Contest ID not found.'); setIsLoading(false); return; }
+                
+                // Fetch contest data first, which is correct
                 const contestRes = await axios.get(`/api/contests/${contestId}`);
                 setContest(contestRes.data);
 
-                if (!session?.user?._id) { setHasFinalSubmission(false); setIsLoading(false); return; }
-                
-                if (draftLocalStorageKey && isActive) {
-                    const savedDrafts = localStorage.getItem(draftLocalStorageKey);
-                    if (savedDrafts) setSubmissions(JSON.parse(savedDrafts));
+                if (!session?.user?._id) { 
+                    setHasFinalSubmission(false); 
+                    setIsLoading(false); 
+                    return; 
                 }
                 
-                if (retakeLocalStorageKey && isEnded) {
-                    const savedRetake = localStorage.getItem(retakeLocalStorageKey);
-                    if(savedRetake) setRetakeSubmissions(JSON.parse(savedRetake));
-                }
+                // --- FIX STARTS HERE ---
+                // The logical order has been corrected.
 
+                // 1. First, check for a final submission. This is the highest priority.
+                let finalSubmissionFound = false;
                 try {
                     const submissionsRes = await axios.get(`/api/submissions?contestId=${contestId}&userId=${session.user._id}&IsFinal=true`);
                     if (submissionsRes.data && submissionsRes.data.length > 0) {
+                        finalSubmissionFound = true; // Mark that we found one
                         setHasFinalSubmission(true);
                         const finalSubs = submissionsRes.data.reduce((acc: Record<string, string>, sub: any) => { acc[sub.problem._id] = sub.selectedOptions[0]; return acc; }, {});
                         setSubmissions(finalSubs);
                         if (draftLocalStorageKey) localStorage.removeItem(draftLocalStorageKey);
-                    } else { setHasFinalSubmission(false); }
-                } catch (subError) { setHasFinalSubmission(false); }
+                    }
+                } catch (subError) {
+                    setHasFinalSubmission(false);
+                }
 
-            } catch (error) { toast.error('Failed to load contest data.'); } 
-            finally { setIsLoading(false); }
+                // 2. ONLY if a final submission was NOT found, try to load from localStorage.
+                if (!finalSubmissionFound && draftLocalStorageKey) {
+                    const savedDrafts = localStorage.getItem(draftLocalStorageKey);
+                    if (savedDrafts) {
+                        setSubmissions(JSON.parse(savedDrafts));
+                    }
+                }
+                // --- FIX ENDS HERE ---
+
+            } catch (error) { 
+                toast.error('Failed to load contest data.'); 
+            } finally { 
+                setIsLoading(false); 
+            }
         };
 
-        if (contestId && authStatus !== 'loading') { fetchData(); }
-    }, [contestId, session?.user?._id, authStatus]);
+        if (contestId && authStatus !== 'loading') { 
+            fetchData(); 
+        }
+    }, [contestId, session?.user?._id, authStatus, draftLocalStorageKey]);
 
     useEffect(() => {
         if (mode === 'retake' && !retakeStartTime && !isRetakeFinished) {
