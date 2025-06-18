@@ -45,15 +45,6 @@ export async function PATCH(request: Request, { params }: { params: { id: string
             // For example, if your main GET /api/contests also uses Redis cache:
             // `all_contests_cache` (if it exists)
         ];
-        // Iterate over user IDs if you cache per user for main list:
-        // You might need a more sophisticated cache invalidation strategy if you have many users
-        // For simplicity, for contest list page, it's often better to just invalidate general caches.
-        // If sidebar is also cached per user, you might need to clear *all* user sidebar caches.
-        // For now, let's assume `sidebar_contests_public` covers the main visibility change.
-        // If `sidebar_contests_user_` is affected, you might need to iterate through existing user IDs.
-        // A simple approach is to clear only the public cache, and logged-in users' caches will refresh after their TTL.
-        // Or, for immediate consistency for all logged-in users, you'd need to fetch all user IDs and clear their caches.
-        // For production, consider using Redis Pub/Sub for more efficient cache invalidation across services/instances.
         if (redis) { // Check if redis client is available
             await redis.del(...cacheKeysToClear);
             console.log(`Cleared Redis caches: ${cacheKeysToClear.join(', ')}`);

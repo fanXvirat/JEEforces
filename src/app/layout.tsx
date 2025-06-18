@@ -21,8 +21,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JEE Forces",
-  description: "Master JEE with Peer Power - India's largest community for JEE preparation",
+  title: {
+    default: 'Jeeforces',
+    template: '%s | Jeeforces',
+  },
+  description: 'Conquer the IIT-JEE by practicing problems, competing in contests, and joining a community of top aspirants.',
 };
 export default function RootLayout({
   children,
