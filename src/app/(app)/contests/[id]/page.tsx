@@ -82,12 +82,27 @@ function ContestPageContent({ params }: ContestPageProps) {
         return retakeStartTime + contestDuration;
     }, [retakeStartTime, contestDuration]);
 
-    const groupedProblems = contest?.problems.reduce((acc, problem) => {
+    const groupedProblems = useMemo(() => {
+    // If there are no problems, return an empty object immediately.
+    if (!contest?.problems) {
+        return {};
+    }
+
+    // 1. Create a shallow copy of the problems array to avoid mutating the original state.
+    // 2. Sort the copied array by score in ascending order.
+    const sortedProblems = [...contest.problems].sort((a, b) => a.score - b.score);
+
+    // 3. Now, group the *sorted* problems by subject.
+    return sortedProblems.reduce((acc, problem) => {
         const subject = problem.subject?.toLowerCase() || 'other';
-        if (!acc[subject]) acc[subject] = [];
+        if (!acc[subject]) {
+            acc[subject] = [];
+        }
         acc[subject].push(problem);
         return acc;
     }, {} as Record<string, Problem[]>);
+
+    }, [contest]);
 
     const availableSubjects = groupedProblems ? Object.keys(groupedProblems) : [];
 
