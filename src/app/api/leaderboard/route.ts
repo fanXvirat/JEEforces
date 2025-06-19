@@ -62,44 +62,74 @@ export async function GET(request: Request) {
 
     // Aggregation pipeline (your existing logic)
     const leaderboard = await UserModel.aggregate([
-      { $match: query },
-      {
-        $lookup: {
-          from: "submissions",
-          localField: "_id",
-          foreignField: "user",
-          as: "submissions"
-        }
-      },
-      {
-        $addFields: {
-          problemsSolved: { $size: "$submissions" },
-          accuracy: {
-            $cond: [
-              { $eq: [{ $size: "$submissions" }, 0] },
-              0,
-              {
-                $divide: [
-                  { $size: { $filter: { input: "$submissions", as: "s", cond: { $eq: ["$$s.correct", true] } } } },
-                  { $size: "$submissions" }
-                ]
-              }
-            ]
+  { $match: query }, // Your existing match logic for search and rating is correct
+  { $sort: { rating: -1 } },
+  { $skip: (page - 1) * limit },
+  { $limit: limit },
+  {
+    $lookup: {
+      from: "submissions",
+      localField: "_id",
+      foreignField: "user",
+      as: "submissions",
+      // We only need the verdict and IsFinal fields for this calculation
+      pipeline: [{ $project: { verdict: 1, IsFinal: 1 } }]
+    }
+  },
+  {
+    $addFields: {
+      // Correctly count problems solved where verdict is "Accepted" and submission is final
+      problemsSolved: {
+        $size: {
+          $filter: {
+            input: "$submissions",
+            as: "s",
+            cond: {
+              $and: [
+                { $eq: ["$$s.verdict", "Accepted"] },
+                { $eq: ["$$s.IsFinal", true] }
+              ]
+            }
           }
         }
       },
-      {
-        $project: {
-          password: 0,
-          email: 0,
-          __v: 0,
-          submissions: 0
+      // Count total final attempts
+      totalFinalSubmissions: {
+        $size: {
+          $filter: {
+            input: "$submissions",
+            as: "s",
+            cond: { $eq: ["$$s.IsFinal", true] }
+          }
         }
-      },
-      { $sort: { rating: -1 } },
-      { $skip: (page - 1) * limit },
-      { $limit: limit }
-    ]);
+      }
+    }
+  },
+  {
+    $addFields: {
+      // Calculate accuracy based on the new, correct fields
+      accuracy: {
+        $cond: [
+          { $eq: ["$totalFinalSubmissions", 0] },
+          0, // Avoid division by zero
+          { $divide: ["$problemsSolved", "$totalFinalSubmissions"] } // Note: this is a ratio (e.g., 0.75), not a percentage
+        ]
+      }
+    }
+  },
+  {
+    // Project the final fields and remove the temporary ones
+    $project: {
+      username: 1,
+      avatar: 1,
+      rating: 1,
+      title: 1,
+      institute: 1,
+      problemsSolved: 1,
+      accuracy: 1
+    }
+  }
+]);
 
     const totalCount = await UserModel.countDocuments(query); // This is also an expensive operation
 
