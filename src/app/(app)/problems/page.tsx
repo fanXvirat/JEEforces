@@ -40,7 +40,7 @@ interface Problem {
     tags: string[];
     subject: string;
 }
-
+import { Sparkles } from 'lucide-react'; // Icon for practice dimension card
 // Optional: Debounce function (if you want to add it later)
 // function debounce(func, wait) { ... implementation ... }
 
@@ -190,7 +190,24 @@ export default function ProblemsPage() {
                     </div>
                 </CardContent>
             </Card>
-
+            <Card className="mb-8 bg-gradient-to-br from-primary/80 via-primary to-secondary/70 text-primary-foreground shadow-lg hover:shadow-xl transition-shadow">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Sparkles className="h-6 w-6" />
+                        Problem Practice Dimension
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="mb-4 text-primary-foreground/90">
+                        Enter a continuous solving streak. Solve a random problem, then pick your next challenge from three choices. See how long you can last until you get one wrong!
+                    </p>
+                    <Link href="/practice">
+                        <Button variant="secondary" size="lg" className="w-full sm:w-auto">
+                            Start Practice Session
+                        </Button>
+                    </Link>
+                </CardContent>
+            </Card>
             {/* Problems Table */}
             <div className="border rounded-lg overflow-hidden">
                 <Table>

@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, Key } from 'react';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import axios, { AxiosError } from 'axios';
-import { Loader2, Settings, Mail, Building, CalendarDays, BarChart3, CheckSquare, History, Trophy, ArrowRight } from 'lucide-react';
+import { Loader2, Settings, Mail, Building, CalendarDays, BarChart3, CheckSquare, History, Trophy, ArrowRight,Flame,BrainCircuit } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -24,6 +24,7 @@ interface UserProfileResponse {
   title: string;
   institute?: string;
   yearofstudy?: string;
+  maxStreak: number;
 }
 
 interface UserStatsResponse {
@@ -226,6 +227,10 @@ export default function DashboardPage() {
                   </div>
                   <p className="text-lg sm:text-xl font-bold">{userAccuracyStats?.problemsSolved || 0}</p>
                </div>
+               <div className="flex items-center justify-between">
+                  <div className="flex items-center"><Flame className="h-5 w-5 mr-3 text-orange-500" /><p>Max Practice Streak</p></div>
+                  <p className="text-lg sm:text-xl font-bold">{userDetails.maxStreak || 0}</p>
+               </div>
                <div>
                   <div className="flex items-center justify-between mb-1">
                      <p className="text-sm font-medium text-muted-foreground">Overall Accuracy</p>
@@ -235,6 +240,23 @@ export default function DashboardPage() {
                </div>
              </CardContent>
            </Card>
+           <Card className="bg-gradient-to-br from-primary/10 to-background">
+                         <CardHeader>
+                           <CardTitle className="flex items-center gap-2">
+                              <BrainCircuit className="h-5 w-5 text-primary" />
+                              Practice Dimension
+                           </CardTitle>
+                           <CardDescription>Hone your skills outside of contests.</CardDescription>
+                         </CardHeader>
+                         <CardContent>
+                            <p className="text-sm text-muted-foreground mb-4">Review your practice attempts and see how you've improved over time.</p>
+                            <Link href="/dashboard/practice-history">
+                                <Button className="w-full">
+                                    View Practice History <ArrowRight className="ml-2 h-4 w-4" />
+                                </Button>
+                            </Link>
+                         </CardContent>
+                    </Card>
         </div>
 
         {/* Right Column (History & Contests) - Takes full width on mobile, 2/3 on md */}

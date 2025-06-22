@@ -13,7 +13,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { RatingChart } from '@/components/rating-chart';
 import Link from 'next/link';
-import { Loader2, Building, CalendarDays, BarChart3, CheckSquare, History, Trophy, ArrowRight, Home, UserX } from 'lucide-react';
+import { Loader2, Building, CalendarDays, BarChart3, CheckSquare, History, Trophy, ArrowRight, Home, UserX ,Flame} from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { getTitleColor } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -123,6 +123,13 @@ const StatsCardSkeleton = () => (
                 <div className="flex-1 space-y-1">
                     <Skeleton className="h-4 w-32 rounded" />
                     <Skeleton className="h-6 w-10 rounded" />
+                </div>
+            </div>
+            <div className="flex items-center gap-3 p-4 border rounded-lg">
+                <Skeleton className="h-8 w-8 rounded"/>
+                <div className="flex-1 space-y-1">
+                    <Skeleton className="h-4 w-28 rounded" />
+                    <Skeleton className="h-6 w-8 rounded" />
                 </div>
             </div>
             <div className="sm:col-span-2 mt-2">
@@ -274,6 +281,13 @@ export default function PublicProfile({ params }: { params: Promise<{ username: 
                         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
                             <div className="flex items-center gap-3 p-4 border rounded-lg"><BarChart3 className="h-8 w-8 text-blue-500 flex-shrink-0" /><div><p className="text-sm font-medium text-muted-foreground">Current Rating</p><p className="text-2xl font-bold">{user.rating ?? 'N/A'}</p></div></div>
                             <div className="flex items-center gap-3 p-4 border rounded-lg"><CheckSquare className="h-8 w-8 text-green-500 flex-shrink-0" /><div><p className="text-sm font-medium text-muted-foreground">Problems Solved</p><p className="text-2xl font-bold">{stats?.problemsSolved ?? 0}</p></div></div>
+                            <div className="flex items-center gap-3 p-4 border rounded-lg">
+                                <Flame className="h-8 w-8 text-orange-500 flex-shrink-0" />
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Max Practice Streak</p>
+                                    <p className="text-2xl font-bold">{user.maxStreak ?? 0}</p>
+                                </div>
+                            </div>
                             <div className="sm:col-span-2 mt-2">
                                 <p className="text-sm font-medium text-muted-foreground mb-1">Overall Accuracy</p>
                                 <Progress value={stats?.accuracy || 0} className="h-2" aria-label="Overall user accuracy"/>

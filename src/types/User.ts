@@ -8,6 +8,7 @@ export interface UserType {
     rating?: number;
     title?: string;
     problemsSolved?: number;
+    maxStreak?: number;
     contestsParticipated?: string[]; // Store ObjectId as string
     contestsJoined: Array<{
         _id: string;

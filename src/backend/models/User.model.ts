@@ -38,6 +38,7 @@ export interface User extends Document{
     isVerified:boolean;
     verifyToken?: string; // Optional for email verification
     verifyTokenExp?: Date; // Optional for email verification
+    maxStreak: number;
 }
 const UserSchema: Schema<User> = new Schema(
     {
@@ -107,6 +108,10 @@ const UserSchema: Schema<User> = new Schema(
         type: Date,
         default: undefined, // Optional for email verification
       },
+      maxStreak: {
+        type: Number,
+        default: 0, // Initialize max streak to 0
+      }
     },
     { timestamps: true } // Automatically adds createdAt and updatedAt
   );
