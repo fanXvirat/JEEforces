@@ -5,6 +5,13 @@ import UserModel          from "@/backend/models/User.model";
 import bcrypt             from "bcryptjs";
 import crypto             from "crypto";
 import { Resend } from "resend";
+import { z } from "zod";
+import { usernameValidation } from "@/backend/schemas/Schemas";
+const signupSchema = z.object({
+  username: usernameValidation,
+  email: z.string().email({ message: 'Invalid email address' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters' })
+})
 const resend = new Resend(process.env.RESEND_API_KEY);
 export async function POST(request: Request) {
   // 1) connect DB
@@ -15,15 +22,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Database connection error" }, { status: 500 });
   }
 
-  let payload: { username: string; email: string; password: string };
+  let payload: unknown;
   try {
     payload = await request.json();
   } catch (err) {
     console.error("🔥 [sign-up] invalid JSON:", err);
     return NextResponse.json({ message: "Invalid request body" }, { status: 400 });
   }
+  const validation = signupSchema.safeParse(payload);
+  if (!validation.success) {
+    return NextResponse.json(
+      { 
+        message: "Invalid input", 
+        errors: validation.error.flatten().fieldErrors 
+      }, 
+      { status: 400 }
+    );
+  }
 
-  const { username, email, password } = payload;
+  const { username, email, password } = validation.data;
   try {
     // 2) uniqueness checks
     if (await UserModel.findOne({ username })) {
