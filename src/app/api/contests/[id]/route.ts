@@ -52,12 +52,16 @@ export async function GET(request: Request) {
         }
         const now = new Date();
         const endTime = new Date(contest.endTime);
+        const startTime = new Date(contest.startTime);
         // For non-admins: hide unpublished contests and problem solutions
         if (user?.role !== 'admin') {
             if (!contest.ispublished) {
                 return Response.json({ error: "Contest not found" }, { status: 404 });
             }
-            
+            if (now < startTime) {
+                contest.problems = []; // Return an empty array for problems
+                return Response.json(contest);
+            }
             // Sanitize problems for participants
             if (now < endTime) {
                 // Sanitize problems for participants DURING the contest
