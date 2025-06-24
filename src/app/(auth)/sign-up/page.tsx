@@ -24,7 +24,7 @@ import { Loader2 } from 'lucide-react';
 type ErrorResponse = {
    message: string;
  };
-function page() {
+function SignUpPage() {
    const [username, setUsername] = useState('');
    const [usernameMessage, setUsernameMessage] = useState('');
    const [isCheckingUsername, setIsCheckingUsername] = useState(false);
@@ -191,4 +191,4 @@ function page() {
    );
 }
 
-export default page;
+export default SignUpPage;
