@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard', request.url)); // Redirect non-admins away
     }
   }
-  if (!token && (url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/practice'))) {
+  if (!token && (url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/practice') || url.pathname.startsWith('/agent'))) {
     return NextResponse.redirect(new URL('/sign-in', request.url));
   }
 

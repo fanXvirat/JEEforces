@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, Key } from 'react';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import axios, { AxiosError } from 'axios';
-import { Loader2, Settings, Mail, Building, CalendarDays, BarChart3, CheckSquare, History, Trophy, ArrowRight,Flame,BrainCircuit } from 'lucide-react';
+import { Loader2, Settings, Mail, Building, CalendarDays, BarChart3, CheckSquare, History, Trophy, ArrowRight,Flame,BrainCircuit,Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -240,6 +240,23 @@ export default function DashboardPage() {
                </div>
              </CardContent>
            </Card>
+           <Card className="bg-gradient-to-br from-primary/10 to-background">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Wand2 className="h-5 w-5 text-primary" />
+                        AI Performance Agent
+                    </CardTitle>
+                    <CardDescription>Get a personalized report of your strengths and weaknesses.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">Let a AI agent analyze your performance and create a tailored study plan with web-powered resources to help you improve.</p>
+                    <Link href="/agent">
+                        <Button className="w-full">
+                            Generate My Analysis <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </Link>
+                </CardContent>
+            </Card>
            <Card className="bg-gradient-to-br from-primary/10 to-background">
                          <CardHeader>
                            <CardTitle className="flex items-center gap-2">
