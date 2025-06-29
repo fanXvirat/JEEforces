@@ -39,6 +39,7 @@ export interface User extends Document{
     verifyToken?: string; // Optional for email verification
     verifyTokenExp?: Date; // Optional for email verification
     maxStreak: number;
+    resendCooldown: Date | null; // Cooldown for resending verification email
 }
 const UserSchema: Schema<User> = new Schema(
     {
@@ -111,6 +112,10 @@ const UserSchema: Schema<User> = new Schema(
       maxStreak: {
         type: Number,
         default: 0, // Initialize max streak to 0
+      },
+      resendCooldown: {
+        type: Date,
+        default: null,
       }
     },
     { timestamps: true } // Automatically adds createdAt and updatedAt

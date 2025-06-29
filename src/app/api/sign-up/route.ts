@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     // 5) setup transporter
     const verifyUrl = `${NEXTAUTH_URL}/api/auth/verify?token=${token}`;
     await resend.emails.send({
-      from: 'JEEForces <onboarding@resend.dev>', // Changed: Use resend.dev domain initially
+      from: 'JEEForces <verify@jeeforces.me>', // Changed: Use resend.dev domain initially
       to: email,
       subject: "Verify your JEEForces account",
       html: `

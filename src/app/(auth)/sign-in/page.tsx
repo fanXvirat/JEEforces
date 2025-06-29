@@ -17,10 +17,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { signInSchema } from '@/backend/schemas/Schemas';
-
+import { useState } from 'react';
 export default function SignInForm() {
    const router = useRouter();
-
+   const [showResend, setShowResend] = useState(false);
+   const [userEmail, setUserEmail] = useState('');
    const form = useForm<z.infer<typeof signInSchema>>({
       resolver: zodResolver(signInSchema),
       defaultValues: {
@@ -37,7 +38,13 @@ export default function SignInForm() {
       });
 
       if (result?.error) {
-         if (result.error === 'CredentialsSignin') {
+         if (result.error === 'Please verify your email before signing in') {
+         setShowResend(true);
+         setUserEmail(data.email);
+         toast('Account not verified', {
+            description: 'Please verify your email to continue.',
+         });}
+         else if (result.error === 'CredentialsSignin') {
             toast('Login Failed', {
                description: 'Incorrect username or password',
             });
@@ -96,6 +103,33 @@ export default function SignInForm() {
                   </Button>
                </form>
             </Form>
+            {showResend && (
+               <div className="text-center mt-4">
+                  <Button
+                     variant="outline"
+                     onClick={async () => {
+                        const res = await fetch('/api/sign-up/resend-verification', {
+                           method: 'POST',
+                           body: JSON.stringify({ email: userEmail }),
+                           headers: { 'Content-Type': 'application/json' },
+                        });
+
+                        if (res.ok) {
+                           toast('Verification email sent!', {
+                              description: `Check your inbox for a new verification link.`,
+                           });
+                        } else {
+                           const { message } = await res.json();
+                           toast('Failed to resend email', {
+                              description: message,
+                           });
+                        }
+                     }}
+                  >
+                     Resend Verification Email
+                  </Button>
+               </div>
+            )}
             <div className='text-center mt-4'>
                <p className="text-muted-foreground">
                   Not a member yet?{' '}
