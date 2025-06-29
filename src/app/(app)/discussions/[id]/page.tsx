@@ -1,5 +1,5 @@
 'use client';
-import { useParams, useRouter } from 'next/navigation'; // Added useRouter
+import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import React, { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
@@ -10,18 +10,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format, formatDistanceToNow } from 'date-fns';
 import axios, { AxiosError } from 'axios';
-import { Loader2, MessagesSquare, SendHorizonal, RefreshCw } from 'lucide-react'; // Added RefreshCw
+// --- START: MODIFIED IMPORTS ---
+import { Loader2, MessagesSquare, SendHorizonal, RefreshCw, Trash2, Flag } from 'lucide-react';
+// --- END: MODIFIED IMPORTS ---
 import { toast } from 'sonner';
 import { VoteButtons } from '@/components/Upvote';
 import { VoteButtonsComment } from '@/components/Upvotecomment';
 import Link from 'next/link';
 import { getTitleColor, cn } from '@/lib/utils';
-import { Flag } from 'lucide-react'; // Import Flag icon for reporting
 
-// --- Interfaces ---
+// --- Interfaces (no changes) ---
 interface Author {
     username: string;
-    title?: string; // Made title optional to handle missing values
+    title?: string;
     avatar?: string;
     _id: string;
 }
@@ -47,23 +48,16 @@ interface Discussion {
     CreatedAt: string;
 }
 
-// --- Helper Functions ---
+// --- Helper Functions (no changes) ---
 const getInitials = (name: string = '') => {
-    return name
-        ?.split(' ')
-        .map((n) => n[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase() || '?';
+    return name?.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase() || '?';
 };
-
-// --- Safe color getter function to handle undefined titles ---
 const getSafeTitleColor = (title?: string) => {
-    if (!title) return 'inherit'; // Default color when title is undefined
-    return getTitleColor(title); // Use your existing function for valid titles
+    if (!title) return 'inherit';
+    return getTitleColor(title);
 };
 
-// --- Skeleton Components ---
+// --- Skeleton Components (no changes) ---
 const DiscussionPostSkeleton = () => (
     <article className="mb-8 pb-8 border-b">
          <div className="flex justify-between items-start mb-4">
@@ -110,10 +104,10 @@ const CommentSkeleton = () => (
      </div>
 );
 
-// --- Main Page Component ---
+
 export default function DiscussionPage() {
     const { id } = useParams<{ id: string }>();
-    const router = useRouter(); // Add router for page refresh
+    const router = useRouter();
     const { data: session, status } = useSession();
     const [discussion, setDiscussion] = useState<Discussion | null>(null);
     const [commentText, setCommentText] = useState('');
@@ -122,6 +116,9 @@ export default function DiscussionPage() {
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
     const [isSubmittingReply, setIsSubmittingReply] = useState<{ [key: string]: boolean }>({});
     const [refreshing, setRefreshing] = useState(false);
+    // --- START: ADDED STATE ---
+    const [isDeleting, setIsDeleting] = useState<{ [key: string]: boolean }>({});
+    // --- END: ADDED STATE ---
 
     const fetchDiscussion = useCallback(async () => {
         try {
@@ -133,7 +130,7 @@ export default function DiscussionPage() {
             setDiscussion(null);
         } finally {
             setLoading(false);
-            setRefreshing(false); // Reset refreshing state
+            setRefreshing(false);
         }
     }, [id]);
 
@@ -144,13 +141,64 @@ export default function DiscussionPage() {
         }
     }, [id, fetchDiscussion]);
 
-    // Manual refresh function
     const handleRefresh = () => {
         setRefreshing(true);
         fetchDiscussion();
     };
 
-    // Option 1: Full page refresh approach
+    // --- START: ADDED DELETE HANDLERS ---
+    const handleDeleteDiscussion = async () => {
+        if (!discussion) return;
+        if (!window.confirm("Are you sure you want to delete this entire discussion? This action cannot be undone.")) return;
+
+        try {
+            await axios.delete(`/api/discussions/${id}`);
+            toast.success("Discussion deleted.");
+            router.push('/discussions');
+        } catch (error) {
+            const axiosError = error as AxiosError<{ error: string }>;
+            toast.error(axiosError.response?.data?.error || "Failed to delete discussion.");
+            console.error(error);
+        }
+    };
+
+    const handleDeleteComment = async (commentId: string) => {
+        if (!discussion) return;
+        if (!window.confirm("Are you sure you want to delete this comment? All replies will also be removed.")) return;
+        
+        setIsDeleting(prev => ({ ...prev, [commentId]: true }));
+        try {
+            await axios.delete(`/api/discussions/${id}/comment/${commentId}`);
+            toast.success("Comment deleted.");
+            fetchDiscussion(); // Refresh data
+        } catch (error) {
+            const axiosError = error as AxiosError<{ error: string }>;
+            toast.error(axiosError.response?.data?.error || "Failed to delete comment.");
+            console.error(error);
+        } finally {
+            setIsDeleting(prev => ({ ...prev, [commentId]: false }));
+        }
+    };
+
+    const handleDeleteReply = async (commentId: string, replyId: string) => {
+        if (!discussion) return;
+        if (!window.confirm("Are you sure you want to delete this reply?")) return;
+
+        setIsDeleting(prev => ({ ...prev, [replyId]: true }));
+        try {
+            await axios.delete(`/api/discussions/${id}/comment/${commentId}/reply/${replyId}`);
+            toast.success("Reply deleted.");
+            fetchDiscussion(); // Refresh data
+        } catch (error) {
+            const axiosError = error as AxiosError<{ error: string }>;
+            toast.error(axiosError.response?.data?.error || "Failed to delete reply.");
+            console.error(error);
+        } finally {
+            setIsDeleting(prev => ({ ...prev, [replyId]: false }));
+        }
+    };
+    // --- END: ADDED DELETE HANDLERS ---
+
     const handleCommentSubmit = async () => {
         if (!commentText.trim() || isSubmittingComment) return;
         if (status !== 'authenticated') {
@@ -163,12 +211,8 @@ export default function DiscussionPage() {
             await axios.post<{ discussion: Discussion }>(`/api/discussions/${id}/comment`, {
                 text: commentText,
             });
-            setCommentText(''); // Clear input before refresh
+            setCommentText('');
             toast.success('Comment added successfully!');
-            
-            // Refresh the page to get the latest data
-            router.refresh(); // Next.js router refresh
-            // Fetch the latest data
             await fetchDiscussion();
             
         } catch (error) {
@@ -195,13 +239,8 @@ export default function DiscussionPage() {
                 { text: replyText }
             );
             
-            // Clear the specific reply input before refresh
             setReplyTexts(prev => ({ ...prev, [commentId]: '' }));
             toast.success('Reply added successfully!');
-            
-            // Refresh the page to get the latest data
-            router.refresh(); // Next.js router refresh
-            // Fetch the latest data
             await fetchDiscussion();
             
         } catch (error) {
@@ -213,17 +252,17 @@ export default function DiscussionPage() {
         }
     };
 
-    // --- Render Functions ---
-
-    const renderComment = (comment: Comment, isReply = false) => {
+    // --- START: MODIFIED RENDER FUNCTION ---
+    const renderComment = (comment: Comment, isReply = false, parentCommentId: string | null = null) => {
         const currentReplyText = replyTexts[comment._id] || '';
         const isReplying = isSubmittingReply[comment._id] || false;
+        const isAuthor = session?.user?._id === comment.author._id;
+        const isAdmin = session?.user?.role === 'admin';
+        const canDelete = isAuthor || isAdmin;
 
         return (
             <div key={comment._id} className={cn(!isReply && "border-b pb-6", isReply && "pb-4")}>
-                 {/* Comment/Reply Header */}
                  <div className="flex justify-between items-start mb-2">
-                     {/* Author Info */}
                      <div className="flex items-center gap-2 text-sm flex-wrap">
                          <Link href={`/users/${comment.author.username}`} className="flex-shrink-0">
                              <Avatar className={cn("h-6 w-6", isReply && "h-5 w-5")}>
@@ -252,8 +291,7 @@ export default function DiscussionPage() {
                              </TooltipContent>
                          </Tooltip>
                      </div>
-                     {/* Voting */}
-                     <div className="flex-shrink-0 ml-2">
+                     <div className="flex items-center flex-shrink-0 ml-2">
                          <VoteButtonsComment
                              upvotes={comment.upvotes || []}
                              downvotes={comment.downvotes || []}
@@ -261,25 +299,58 @@ export default function DiscussionPage() {
                              discussionId={discussion!._id}
                              isReply={isReply}
                          />
+                         {session?.user && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Link href={`/feedback?reportedUserId=${comment.author._id}`}>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-600">
+                                            <Flag className="h-4 w-4" />
+                                        </Button>
+                                    </Link>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Report this {isReply ? 'reply' : 'comment'}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                         )}
+                         {canDelete && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-muted-foreground hover:text-red-600"
+                                        disabled={isDeleting[comment._id]}
+                                        onClick={() => {
+                                            if (isReply && parentCommentId) {
+                                                handleDeleteReply(parentCommentId, comment._id);
+                                            } else {
+                                                handleDeleteComment(comment._id);
+                                            }
+                                        }}
+                                    >
+                                        {isDeleting[comment._id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Delete {isReply ? 'reply' : 'comment'}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        )}
                      </div>
                  </div>
 
-                 {/* Comment/Reply Text */}
                  <p className={cn("text-sm leading-relaxed", isReply ? "pl-[34px]" : "pl-[32px]")}>
                     {comment.text}
                  </p>
 
-                 {/* Render Reply Form (only for top-level comments) */}
                  {!isReply && session?.user && (
-                    <div className={cn("mt-3", isReply ? "pl-[34px]" : "pl-[32px]")}>
+                    <div className={cn("mt-3", "pl-[32px]")}>
                          <form onSubmit={(e) => { e.preventDefault(); handleReplySubmit(comment._id); }}>
                             <div className="flex items-start gap-2">
                                 <Textarea
                                     value={currentReplyText}
-                                    onChange={(e) => setReplyTexts(prev => ({
-                                        ...prev,
-                                        [comment._id]: e.target.value
-                                    }))}
+                                    onChange={(e) => setReplyTexts(prev => ({ ...prev, [comment._id]: e.target.value }))}
                                     placeholder="Write a reply..."
                                     className="h-auto text-sm"
                                     rows={1}
@@ -291,34 +362,18 @@ export default function DiscussionPage() {
                                 </Button>
                             </div>
                         </form>
-                        <div className="flex-shrink-0">
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Link href={`/feedback?reportedUserId=${comment.author._id}`}>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-600">
-                                        <Flag className="h-4 w-4" />
-                                    </Button>
-                                </Link>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Report this {isReply ? 'reply' : 'comment'}</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </div>
                     </div>
                 )}
 
-                 {/* Render Nested Replies */}
                  {!isReply && comment.replies && comment.replies.length > 0 && (
                     <div className="mt-4 pl-6 border-l-2 border-border/50 space-y-4">
-                        {comment.replies.map(reply => renderComment(reply, true))}
+                        {comment.replies.map(reply => renderComment(reply, true, comment._id))}
                     </div>
                  )}
             </div>
         );
     };
-
-    // --- Main Render ---
+    // --- END: MODIFIED RENDER FUNCTION ---
 
     if (loading) {
         return (
@@ -360,17 +415,30 @@ export default function DiscussionPage() {
                     </Button>
                 </div>
                 
-                {/* Discussion Post */}
                 <article className="mb-10 pb-8 border-b">
                     <div className="flex flex-col-reverse sm:flex-row justify-between items-start gap-4 mb-4">
                         <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex-1">{discussion.title}</h1>
-                        <div className="flex-shrink-0">
+                        {/* --- START: MODIFIED DISCUSSION ACTIONS --- */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
                             <VoteButtons
                                 upvotes={discussion.upvotes}
                                 downvotes={discussion.downvotes}
                                 discussionId={discussion._id}
                             />
+                            {(session?.user?._id === discussion.author._id || session?.user?.role === 'admin') && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-600" onClick={handleDeleteDiscussion}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Delete Discussion</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            )}
                         </div>
+                        {/* --- END: MODIFIED DISCUSSION ACTIONS --- */}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
                         <Link href={`/users/${discussion.author.username}`}>
@@ -403,14 +471,12 @@ export default function DiscussionPage() {
                     </div>
                 </article>
 
-                {/* Comments Section */}
                 <section>
                     <h2 className="text-xl md:text-2xl font-bold mb-6 flex items-center gap-2">
                         <MessagesSquare className="h-6 w-6 text-primary" />
                         Comments ({discussion.comments?.length ?? 0})
                     </h2>
 
-                    {/* Add Comment Form */}
                      {status === 'authenticated' && session?.user && (
                         <form onSubmit={(e) => { e.preventDefault(); handleCommentSubmit(); }} className="mb-8 flex items-start gap-3">
                             <Avatar className="h-8 w-8 mt-1.5 flex-shrink-0">
@@ -441,7 +507,6 @@ export default function DiscussionPage() {
                          </p>
                      )}
 
-                    {/* Comments List */}
                     <div className="space-y-6">
                         {discussion.comments && discussion.comments.length > 0 ? (
                             discussion.comments.map(comment => renderComment(comment))
