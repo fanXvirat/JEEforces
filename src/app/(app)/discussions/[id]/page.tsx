@@ -416,58 +416,61 @@ export default function DiscussionPage() {
                 </div>
                 
                 <article className="mb-10 pb-8 border-b">
-                    <div className="flex flex-col-reverse sm:flex-row justify-between items-start gap-4 mb-4">
-                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex-1">{discussion.title}</h1>
-                        {/* --- START: MODIFIED DISCUSSION ACTIONS --- */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                            <VoteButtons
-                                upvotes={discussion.upvotes}
-                                downvotes={discussion.downvotes}
-                                discussionId={discussion._id}
-                            />
-                            {(session?.user?._id === discussion.author._id || session?.user?.role === 'admin') && (
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-600" onClick={handleDeleteDiscussion}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>Delete Discussion</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            )}
-                        </div>
-                        {/* --- END: MODIFIED DISCUSSION ACTIONS --- */}
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-                        <Link href={`/users/${discussion.author.username}`}>
-                            <Avatar className="h-8 w-8">
-                                <AvatarImage src={discussion.author.avatar} alt={discussion.author.username} />
-                                <AvatarFallback>{getInitials(discussion.author.username)}</AvatarFallback>
-                            </Avatar>
-                         </Link>
-                        <span>By{' '}
-                            <Link
-                                href={`/users/${discussion.author.username}`}
-                                style={{ color: getSafeTitleColor(discussion.author.title) }}
-                                className="font-medium hover:underline"
-                            >
-                                {discussion.author.username}
+                    {/* --- Block 1: Title and Author Info --- */}
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-4">{discussion.title}</h1>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+                            <Link href={`/users/${discussion.author.username}`}>
+                                <Avatar className="h-8 w-8">
+                                    <AvatarImage src={discussion.author.avatar} alt={discussion.author.username} />
+                                    <AvatarFallback>{getInitials(discussion.author.username)}</AvatarFallback>
+                                </Avatar>
                             </Link>
-                        </span>
-                        <span className="text-muted-foreground">•</span>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                 <span className="cursor-default">{formatDistanceToNow(new Date(discussion.CreatedAt), { addSuffix: true })}</span>
-                             </TooltipTrigger>
-                            <TooltipContent>
-                                <p>{format(new Date(discussion.CreatedAt), 'MMM dd, yyyy HH:mm')}</p>
-                            </TooltipContent>
-                        </Tooltip>
+                            <span>By{' '}
+                                <Link
+                                    href={`/users/${discussion.author.username}`}
+                                    style={{ color: getSafeTitleColor(discussion.author.title) }}
+                                    className="font-medium hover:underline"
+                                >
+                                    {discussion.author.username}
+                                </Link>
+                            </span>
+                            <span className="text-muted-foreground">•</span>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span className="cursor-default">{formatDistanceToNow(new Date(discussion.CreatedAt), { addSuffix: true })}</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{format(new Date(discussion.CreatedAt), 'MMM dd, yyyy HH:mm')}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
                     </div>
+
+                    {/* --- Block 2: Main Content --- */}
                     <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none whitespace-pre-wrap leading-relaxed">
                         <p>{discussion.content}</p>
+                    </div>
+
+                    {/* --- Block 3: Action Buttons (Votes & Delete) --- */}
+                    <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t">
+                        <VoteButtons
+                            upvotes={discussion.upvotes}
+                            downvotes={discussion.downvotes}
+                            discussionId={discussion._id}
+                        />
+                        {(session?.user?._id === discussion.author._id || session?.user?.role === 'admin') && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-600" onClick={handleDeleteDiscussion}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Delete Discussion</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        )}
                     </div>
                 </article>
 

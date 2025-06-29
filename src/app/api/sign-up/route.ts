@@ -7,6 +7,7 @@ import crypto             from "crypto";
 import { Resend } from "resend";
 import { z } from "zod";
 import { usernameValidation } from "@/backend/schemas/Schemas";
+import { verifyCaptcha } from "@/lib/captcha";
 const signupSchema = z.object({
   username: usernameValidation,
   email: z.string().email({ message: 'Invalid email address' }),
@@ -29,7 +30,29 @@ export async function POST(request: Request) {
     console.error("🔥 [sign-up] invalid JSON:", err);
     return NextResponse.json({ message: "Invalid request body" }, { status: 400 });
   }
-  const validation = signupSchema.safeParse(payload);
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    !("captchaToken" in payload)
+  ) {
+    return NextResponse.json({ message: "Missing captchaToken" }, { status: 400 });
+  }
+  const { captchaToken, ...signupData } = payload as { captchaToken: string; [key: string]: any };
+  const isHuman = await verifyCaptcha(captchaToken);
+  if (!isHuman) {
+    return NextResponse.json(
+      { message: "CAPTCHA verification failed. Please try again." },
+      { status: 403 } // 403 Forbidden is appropriate
+    );
+  }
+
+  try {
+    await dbConnect();
+  } catch (err) {
+    console.error("🔥 [sign-up] dbConnect failed:", err);
+    return NextResponse.json({ message: "Database connection error" }, { status: 500 });
+  }
+  const validation = signupSchema.safeParse(signupData);
   if (!validation.success) {
     return NextResponse.json(
       { 

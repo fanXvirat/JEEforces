@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { signUpSchema } from '@/backend/schemas/Schemas';
 import { Loader2 } from 'lucide-react';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 type ErrorResponse = {
    message: string;
  };
@@ -31,7 +32,7 @@ function SignUpPage() {
    const [isSubmitting, setIsSubmitting] = useState(false);
    const debounced = useDebounceCallback(setUsername, 300);
    const router = useRouter();
-
+   const { executeRecaptcha } = useGoogleReCaptcha();
    const form = useForm<z.infer<typeof signUpSchema>>({
       resolver: zodResolver(signUpSchema),
       defaultValues: {
@@ -65,8 +66,14 @@ function SignUpPage() {
 
    const onSubmit = async (data: z.infer<typeof signUpSchema>) => {
       setIsSubmitting(true);
+      if (!executeRecaptcha) {
+        toast.error('CAPTCHA not ready. Please refresh the page and try again.');
+        setIsSubmitting(false);
+        return;
+      }
+      const captchaToken = await executeRecaptcha('signup');
       try {
-         const response = await axios.post('/api/sign-up', data);
+         const response = await axios.post('/api/sign-up', {...data,captchaToken,});
          toast('Success', { description: response.data.message });
          router.replace(`/sign-in`);
          setIsSubmitting(false);
@@ -175,6 +182,31 @@ function SignUpPage() {
                   </Button>
                </form>
             </Form>
+            <p className="px-8 text-center text-sm text-muted-foreground">
+                    By clicking continue, you agree to our{" "}
+                    <Link
+                        href="/terms" // You should create a terms page
+                        className="underline underline-offset-4 hover:text-primary"
+                    >
+                        Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                        href="/privacy" // You should create a privacy page
+                        className="underline underline-offset-4 hover:text-primary"
+                    >
+                        Privacy Policy
+                    </Link>
+                    .
+                    <br/>
+                    This site is protected by reCAPTCHA and the Google{" "}
+                    <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-primary">
+                        Privacy Policy
+                    </a> and{" "}
+                    <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-primary">
+                        Terms of Service
+                    </a> apply.
+                </p>
             <div className='text-center mt-4'>
                <p className="text-muted-foreground">
                   Already a member?{' '}

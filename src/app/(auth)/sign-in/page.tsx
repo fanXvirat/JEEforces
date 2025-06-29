@@ -18,10 +18,12 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { signInSchema } from '@/backend/schemas/Schemas';
 import { useState } from 'react';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 export default function SignInForm() {
    const router = useRouter();
    const [showResend, setShowResend] = useState(false);
    const [userEmail, setUserEmail] = useState('');
+   const { executeRecaptcha } = useGoogleReCaptcha();
    const form = useForm<z.infer<typeof signInSchema>>({
       resolver: zodResolver(signInSchema),
       defaultValues: {
@@ -31,24 +33,34 @@ export default function SignInForm() {
    });
 
    const onSubmit = async (data: z.infer<typeof signInSchema>) => {
+
+      if (!executeRecaptcha) {
+         toast.error('CAPTCHA not ready. Please refresh the page and try again.');
+         return;
+      }
+      const captchaToken = await executeRecaptcha('signin');
+
+      // --- 4. Pass the token along with credentials ---
       const result = await signIn('credentials', {
          redirect: false,
          email: data.email,
          password: data.password,
+         captchaToken, // Add token here
       });
 
       if (result?.error) {
          if (result.error === 'Please verify your email before signing in') {
-         setShowResend(true);
-         setUserEmail(data.email);
-         toast('Account not verified', {
-            description: 'Please verify your email to continue.',
-         });}
-         else if (result.error === 'CredentialsSignin') {
+            setShowResend(true);
+            setUserEmail(data.email);
+            toast('Account not verified', {
+               description: 'Please verify your email to continue.',
+            });
+         } else if (result.error === 'CredentialsSignin' || result.error === 'Incorrect password' || result.error === 'No user found with this email') {
             toast('Login Failed', {
-               description: 'Incorrect username or password',
+               description: 'Incorrect email or password.',
             });
          } else {
+            // This will now catch our CAPTCHA error message
             toast('Error', {
                description: result.error,
             });
@@ -141,6 +153,15 @@ export default function SignInForm() {
                   </Link>
                </p>
             </div>
+            <p className="px-8 pt-4 text-center text-xs text-muted-foreground border-t">
+                    This site is protected by reCAPTCHA and the Google{" "}
+                    <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-primary">
+                        Privacy Policy
+                    </a> and{" "}
+                    <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-primary">
+                        Terms of Service
+                    </a> apply.
+                </p>
          </div>
       </div>
    );

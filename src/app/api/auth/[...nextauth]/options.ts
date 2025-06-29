@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/dbConnect';
 import UserModel from '@/backend/models/User.model';
 import GoogleProvider from 'next-auth/providers/google';
-
+import { verifyCaptcha } from '@/lib/captcha';
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -13,8 +13,13 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'text' },
         password: { label: 'Password', type: 'password' },
+        captchaToken: { label: 'Captcha Token', type: 'text' }
       },
       async authorize(credentials) {
+        const isHuman = await verifyCaptcha(credentials?.captchaToken);
+        if (!isHuman) {
+          throw new Error('CAPTCHA verification failed. Please try again.');
+        }
         await dbConnect();
         try {
           if (!credentials?.email || !credentials?.password) {

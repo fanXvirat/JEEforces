@@ -115,7 +115,9 @@
 }
 
 
-
+.grecaptcha-badge {
+    visibility: hidden !important;
+}
 @layer base {
   * {
     @apply border-border outline-ring/50;

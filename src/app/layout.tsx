@@ -10,6 +10,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider"; 
 import QueryProvider from "@/context/query-provider";
+import CaptchaProvider from "@/context/CaptchaProvider";
 const geistSans = Geist({
   subsets: ["latin"],
   variable: "--font-geist-sans",
@@ -32,6 +33,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -41,6 +44,7 @@ export default function RootLayout({
           geistMono.variable
         )}
       >
+        <CaptchaProvider>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -62,6 +66,7 @@ export default function RootLayout({
           </AuthProvider>
           </QueryProvider>
         </ThemeProvider>
+        </CaptchaProvider>
       </body>
     </html>
   );
