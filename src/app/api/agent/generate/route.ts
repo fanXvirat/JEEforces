@@ -3,7 +3,7 @@ import { getPerformanceSummary } from '@/lib/performance';
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/options";
 import { User } from "next-auth";
-
+import { agentlimiter } from "@/lib/rate-limiter";
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
@@ -13,7 +13,13 @@ export async function POST(request: Request) {
     if (!user?._id) {
         return new Response("Unauthorized", { status: 401 });
     }
-
+    const identifier = user._id;
+    const { success } = await agentlimiter.limit(identifier);
+    if (!success) {
+        return new Response("Too many analysis requests. Please try again later.", {
+        status: 429,
+        });
+    }
     try {
         const { apiKey } = await request.json();
         if (!apiKey || typeof apiKey !== 'string') {

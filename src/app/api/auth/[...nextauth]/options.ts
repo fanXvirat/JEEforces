@@ -5,6 +5,7 @@ import dbConnect from '@/lib/dbConnect';
 import UserModel from '@/backend/models/User.model';
 import GoogleProvider from 'next-auth/providers/google';
 import { verifyCaptcha } from '@/lib/captcha';
+import { rateLimiter } from '@/lib/rate-limiter';
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -16,6 +17,11 @@ export const authOptions: NextAuthOptions = {
         captchaToken: { label: 'Captcha Token', type: 'text' }
       },
       async authorize(credentials) {
+        const identifier = credentials?.email || 'anonymous';
+        const { success } = await rateLimiter.limit(identifier);
+        if (!success) {
+          throw new Error('Too many login attempts. Please try again in 5 minutes');
+        }
         const isHuman = await verifyCaptcha(credentials?.captchaToken);
         if (!isHuman) {
           throw new Error('CAPTCHA verification failed. Please try again.');

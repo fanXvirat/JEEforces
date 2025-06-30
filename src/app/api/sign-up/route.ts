@@ -8,6 +8,7 @@ import { Resend } from "resend";
 import { z } from "zod";
 import { usernameValidation } from "@/backend/schemas/Schemas";
 import { verifyCaptcha } from "@/lib/captcha";
+import { rateLimiter } from "@/lib/rate-limiter";
 const signupSchema = z.object({
   username: usernameValidation,
   email: z.string().email({ message: 'Invalid email address' }),
@@ -15,6 +16,16 @@ const signupSchema = z.object({
 })
 const resend = new Resend(process.env.RESEND_API_KEY);
 export async function POST(request: Request) {
+  const ip = request.headers.get("x-forwarded-for") || "anonymous";
+  
+  // ⛔ Step 0: Rate limit check
+  const { success } = await rateLimiter.limit(ip);
+  if (!success) {
+    return NextResponse.json(
+      { message: "Too many requests. Please try again in 5 minutes." },
+      { status: 429 }
+    );
+  }
   // 1) connect DB
   try {
     await dbConnect();

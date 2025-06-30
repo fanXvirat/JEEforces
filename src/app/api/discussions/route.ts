@@ -3,7 +3,7 @@ import {DiscussionModel} from "@/backend/models/Discussion.model";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
 import { PipelineStage } from "mongoose";
-
+import { rateLimiter } from "@/lib/rate-limiter";
 export async function POST(request: Request) {
     await dbConnect();
     const session = await getServerSession(authOptions);
@@ -11,7 +11,14 @@ export async function POST(request: Request) {
     if (!session || !session.user) {
         return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
-
+    const identifier = session.user._id || "anonymous";
+    const { success } = await rateLimiter.limit(identifier);
+    if (!success) {
+        return Response.json(
+        { error: "Too many requests. Please slow down." },
+        { status: 429 }
+        );
+    }
     try {
         const { title, content } = await request.json();
         if (!title || !content) {
