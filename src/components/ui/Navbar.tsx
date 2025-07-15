@@ -44,7 +44,7 @@ const navLinks = [
     { href: '/problems', label: 'Problems' },
     { href: '/leaderboard', label: 'Leaderboard' },
     { href: '/discussions', label: 'Discussions' },
-    { href: 'about', label: 'About' },
+    { href: '/about', label: 'About' },
     { href : '/feedback', label: 'Feedback' },
 ];
 
