@@ -1,6 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import ProblemModel from "@/backend/models/Problem.model";
-import SubmissionModel from "@/backend/models/Submission.model"; // Import SubmissionModel
+import SubmissionModel from "@/backend/models/Submission.model";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/options";
 import { NextRequest } from "next/server";
@@ -19,6 +19,8 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const count = parseInt(searchParams.get('count') || '1');
+        const subjectsParam = searchParams.get('subjects');
+        const subjects = subjectsParam ? subjectsParam.split(',') : [];
 
         // 1. Find all problems this user has already submitted answers for (in practice)
         const userSubmissions = await SubmissionModel.find({ 
@@ -28,19 +30,24 @@ export async function GET(request: NextRequest) {
 
         const excludedIds = userSubmissions.map(sub => sub.problem);
         
-        // 2. Fetch random problems, excluding the ones already attempted
+        // 2. Build the match query
+        const matchQuery: any = {
+            ispublished: true,
+            _id: { $nin: excludedIds }
+        };
+
+        if (subjects.length > 0) {
+            matchQuery.subject = { $in: subjects };
+        }
+        
+        // 3. Fetch random problems using the constructed query
         const problems = await ProblemModel.aggregate([
-            { 
-              $match: { 
-                ispublished: true,
-                _id: { $nin: excludedIds }
-              }
-            },
+            { $match: matchQuery },
             { $sample: { size: count } }
         ]);
 
         if (!problems || problems.length === 0) {
-            return Response.json({ message: "No more problems found. You've solved them all!" }, { status: 404 });
+            return Response.json({ message: "No more problems found. You've solved them all for the selected subjects!" }, { status: 404 });
         }
         
         return Response.json(count === 1 ? problems[0] : problems, { status: 200 });

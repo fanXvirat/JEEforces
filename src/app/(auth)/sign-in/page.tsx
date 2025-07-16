@@ -67,8 +67,10 @@ export default function SignInForm() {
          }
       }
 
-      if (result?.url) {
-         router.replace('/dashboard');
+      if (result?.ok && !result.error) {
+         router.push('/dashboard');
+         toast.success("Signed in successfully!");
+         router.refresh();
       }
    };
 

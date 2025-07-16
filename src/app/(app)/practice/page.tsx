@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { motion, AnimatePresence } from 'framer-motion'; // Animation library
+import { motion, AnimatePresence } from 'framer-motion';
 
 // UI Components from Shadcn
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,8 @@ import {
     AccordionItem,
     AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 // Icons
 import { Loader2, ArrowLeft, Trophy, BarChart2, CheckCircle, Swords, XCircle, Clock, Award } from 'lucide-react';
@@ -44,16 +46,16 @@ interface DifficultyCounts {
     3: number; // Hard
 }
 
-// For the motivational pop-up
 interface Milestone {
     text: string;
-    faceImage: string; // Path to your animated face GIF/image
+    faceImage: string;
 }
 interface FailedProblemInfo {
     problem: ProblemDetails;
     userAnswer: string;
 }
-type GameState = 'loading' | 'solving' | 'choosing' | 'finished';
+type GameState = 'loading' | 'selecting_subjects' | 'solving' | 'choosing' | 'finished';
+const ALL_SUBJECTS = ['Physics', 'Chemistry', 'Mathematics'];
 
 // --- The Main Practice Page Component ---
 
@@ -61,7 +63,6 @@ export default function PracticePage() {
     // Game flow state
     const [gameState, setGameState] = useState<GameState>('loading');
     const [failedProblem, setFailedProblem] = useState<FailedProblemInfo | null>(null);
-    // Problem state
     const [currentProblem, setCurrentProblem] = useState<ProblemDetails | null>(null);
     const [nextProblems, setNextProblems] = useState<ProblemDetails[]>([]);
     
@@ -69,18 +70,17 @@ export default function PracticePage() {
     const [streak, setStreak] = useState(0);
     const [solvedProblems, setSolvedProblems] = useState<ProblemDetails[]>([]);
     const [difficultyCounts, setDifficultyCounts] = useState<DifficultyCounts>({ 1: 0, 2: 0, 3: 0 });
+    const [selectedSubjects, setSelectedSubjects] = useState<string[]>(ALL_SUBJECTS);
     
     // User interaction state
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
-    // State for timer and motivational pop-ups
     const [seconds, setSeconds] = useState(0);
     const [activeMilestone, setActiveMilestone] = useState<Milestone | null>(null);
 
     // --- Core Logic Functions ---
 
-    // Timer effect
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
         if (gameState === 'solving' || gameState === 'choosing') {
@@ -93,12 +93,10 @@ export default function PracticePage() {
         };
     }, [gameState]);
 
-    // Motivational pop-up effect based on streak
     useEffect(() => {
         if (streak === 0) return;
 
         let milestone: Milestone | null = null;
-        // Define your milestones here
         switch (streak) {
             case 1:
                 milestone = { text: "Channelise your laser eyes", faceImage: "/faces/angry (1) (1).gif" };
@@ -116,23 +114,27 @@ export default function PracticePage() {
 
         if (milestone) {
             setActiveMilestone(milestone);
-            const timer = setTimeout(() => setActiveMilestone(null), 3500); // Popup disappears after 3.5s
+            const timer = setTimeout(() => setActiveMilestone(null), 3500);
             return () => clearTimeout(timer);
         }
     }, [streak]);
 
-    const fetchRandomProblems = useCallback(async (count: number) => {
+    const fetchRandomProblems = useCallback(async (count: number, subjects: string[]) => {
         try {
-            const { data } = await axios.get(`/api/problems/random?count=${count}`);
+            const params = new URLSearchParams({ count: count.toString() });
+            if (subjects.length > 0) {
+                params.append('subjects', subjects.join(','));
+            }
+            const { data } = await axios.get(`/api/problems/random?${params.toString()}`);
             return data;
         } catch (error) {
-            toast.error("Failed to load new problems. You may have solved them all!");
+            toast.error("Failed to load new problems. You may have solved them all for the selected subjects!");
             throw error;
         }
     }, []);
 
     const startSession = useCallback(async () => {
-        setGameState('loading');
+        setGameState('selecting_subjects');
         setStreak(0);
         setSeconds(0);
         setSolvedProblems([]);
@@ -140,19 +142,27 @@ export default function PracticePage() {
         setSelectedOption(null);
         setIsCorrect(null);
         setFailedProblem(null);
-        try {
-            const problem = await fetchRandomProblems(1);
-            setCurrentProblem(problem);
-            setGameState('solving');
-        } catch (e) {
-            setGameState('finished');
-        }
-    }, [fetchRandomProblems]);
+    }, []);
 
     useEffect(() => {
         startSession();
     }, [startSession]);
 
+    const handleStartPractice = async () => {
+        if (selectedSubjects.length === 0) {
+            toast.error("Please select at least one subject to start.");
+            return;
+        }
+        setGameState('loading');
+        try {
+            const problem = await fetchRandomProblems(1, selectedSubjects);
+            setCurrentProblem(problem);
+            setGameState('solving');
+        } catch (e) {
+            setGameState('finished');
+        }
+    };
+    
     const handleCheckAnswer = async () => {
         if (!selectedOption || !currentProblem) return;
 
@@ -180,7 +190,7 @@ export default function PracticePage() {
 
                 setTimeout(() => {
                     setGameState('loading');
-                    fetchRandomProblems(3).then(problems => {
+                    fetchRandomProblems(3, selectedSubjects).then(problems => {
                         setNextProblems(problems);
                         setGameState('choosing');
                     }).catch(() => setGameState('finished'));
@@ -236,6 +246,42 @@ export default function PracticePage() {
     };
     const pageTransition = { type: 'tween', ease: 'anticipate', duration: 0.5 };
 
+    const renderSubjectSelection = () => (
+        <motion.div key="selecting_subjects" variants={pageVariants} transition={pageTransition} initial="initial" animate="in" exit="out" className="container mx-auto px-4 py-8 max-w-lg">
+            <Card className="text-center w-full shadow-lg border">
+                <CardHeader>
+                    <CardTitle className="text-3xl font-bold mt-4">Practice Dimension</CardTitle>
+                    <CardDescription>Select the subjects you want to practice.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6 px-4 sm:px-6">
+                    <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 text-left">
+                        {ALL_SUBJECTS.map((subject) => (
+                            <div key={subject} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={subject.toLowerCase()}
+                                    checked={selectedSubjects.includes(subject)}
+                                    onCheckedChange={(checked: any) => {
+                                        setSelectedSubjects(prev => 
+                                            checked 
+                                            ? [...prev, subject]
+                                            : prev.filter(s => s !== subject)
+                                        )
+                                    }}
+                                />
+                                <Label htmlFor={subject.toLowerCase()} className="text-lg font-medium cursor-pointer">
+                                    {subject}
+                                </Label>
+                            </div>
+                        ))}
+                    </div>
+                    <Button onClick={handleStartPractice} size="lg" className="w-full mt-4">
+                        Start Practice Session
+                    </Button>
+                </CardContent>
+            </Card>
+        </motion.div>
+    );
+
     // --- Render ---
     return (
         <>
@@ -260,7 +306,7 @@ export default function PracticePage() {
                         <p className="text-muted-foreground">Preparing your next challenge...</p>
                     </motion.div>
                 )}
-                
+                {gameState === 'selecting_subjects' && renderSubjectSelection()}
                 {gameState === 'finished' && (
                     <motion.div key="finished" variants={pageVariants} transition={pageTransition} initial="initial" animate="in" exit="out" className="container mx-auto px-4 py-8 max-w-2xl">
                         <Card className="text-center w-full shadow-lg border">
@@ -342,7 +388,6 @@ export default function PracticePage() {
                                     </Card>
                                 )}
 
-                                {/* Solved Problems Review (Correct Answers) */}
                                 {solvedProblems.length > 0 && (
                                     <div className="text-left pt-4">
                                        <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
