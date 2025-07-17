@@ -8,19 +8,24 @@ import mongoose from "mongoose";
 
 // Calculate title based on updated rating thresholds
 function calculateTitle(rating: number): string {
-    if (rating >= 2100) return 'Candidate Master';
-    else if (rating >= 1900) return 'Expert';
-    else if (rating >= 1000) return 'Pupil';
-    else return 'Newbie';
+    if (rating >= 2100) return 'master';
+    else if (rating >= 1900) return 'expert';
+    else if (rating >= 1600) return 'specialist';
+    else if (rating >= 1000) return 'pupil';
+    else return 'newbie';
 }
 
 // Dynamic K-factor based on rating and participant count
 function getKFactor(rating: number, participantCount: number): number {
     // Base K by rating tier
-    if (rating < 1200) return 40;
-    if (rating < 2000) return 32;
-    if (rating < 2400) return 24;
-    return 16;
+    let baseK: number;
+    if(rating < 900) baseK= 65; // Newbie
+    else if (rating < 1200) baseK= 40;
+    else if (rating < 2000) baseK= 32;
+    else if (rating < 2400) baseK= 24;
+    else baseK= 16;
+    const dampingFactor = 1 / (1 + Math.max(0, participantCount - 50) / 100);
+    return Math.round(baseK * dampingFactor);
 }
 
 export async function POST(request: Request) {
@@ -82,7 +87,7 @@ export async function POST(request: Request) {
         const userIds = leaderboard.map(e => new mongoose.Types.ObjectId(e.userId));
         await UserModel.updateMany(
             { _id: { $in: userIds }, rating: 0 },
-            { $set: { rating: 1000 } }
+            { $set: { rating: 300 } }
         );
 
         // Fetch current ratings
