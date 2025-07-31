@@ -231,7 +231,7 @@ export const RevisionFeed: React.FC<{
           {isLoading ? (
             <>
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="mt-2 text-sm font-medium">Loading more challenges…</p>
+              <p className="mt-2 text-sm font-medium">Cooking more challenges… Please Wait 30-45 second for initial load</p>
             </>
           ) : (
             <div className="text-center animate-pulse">
