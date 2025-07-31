@@ -99,16 +99,16 @@ export default function PracticePage() {
         let milestone: Milestone | null = null;
         switch (streak) {
             case 1:
-                milestone = { text: "Channelise your laser eyes", faceImage: "/faces/angry (1) (1).gif" };
+                milestone = { text: "lets gooo !!", faceImage: "/faces/angry (1) (1).gif" };
                 break;
             case 3:
                 milestone = { text: "chaloo fod do aaj !!", faceImage: "/faces/gifgit (2).gif" };
                 break;
             case 5:
-                milestone = { text: "Panja! Ab toh form mein ho!", faceImage: "/faces/gifgit (1) (1).gif" };
+                milestone = { text: "bow down to the king!", faceImage: "/faces/gifgit (1) (1).gif" };
                 break;
             case 10:
-                milestone = { text: "DUS KA DUM! Fodd diya!", faceImage: "/faces/physics-wallah-pw (1).gif" };
+                milestone = { text: "LEGEND!", faceImage: "/faces/physics-wallah-pw (1).gif" };
                 break;
         }
 

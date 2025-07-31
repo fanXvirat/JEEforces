@@ -72,6 +72,7 @@ export default function Navbar() {
                                         ? 'text-primary'
                                         : 'text-muted-foreground hover:text-primary'
                                 }`}
+                                suppressHydrationWarning={true}
                             >
                                 {link.label}
                             </Button>
