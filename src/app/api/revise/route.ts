@@ -1,8 +1,7 @@
 // src/app/api/revise/route.ts
 import { NextResponse } from 'next/server';
 import { generateRevisionFeed, validateAndStructureTopic, generateExplanation } from '@/lib/ai/gemini';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/options';
+
 
 // This function will now be responsible for getting the key and handling the error
 function getApiKeyFromRequest(payload: any): string | null {
@@ -11,11 +10,6 @@ function getApiKeyFromRequest(payload: any): string | null {
 }
 
 export async function POST(request: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     try {
         const { action, ...payload } = await request.json();
 

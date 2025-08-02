@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider"; 
 import QueryProvider from "@/context/query-provider";
 import CaptchaProvider from "@/context/CaptchaProvider";
+import { Analytics } from "@vercel/analytics/next"
 const geistSans = Geist({
   subsets: ["latin"],
   variable: "--font-geist-sans",
@@ -67,6 +68,7 @@ export default function RootLayout({
           </QueryProvider>
         </ThemeProvider>
         </CaptchaProvider>
+        <Analytics />
       </body>
     </html>
   );

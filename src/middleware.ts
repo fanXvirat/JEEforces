@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/sign-in', '/sign-up','/revise','/practice','/admin/:path*','/contests/create','/problems/create','/agent/:path*'],
+  matcher: ['/dashboard/:path*', '/sign-in', '/sign-up','/practice','/admin/:path*','/contests/create','/problems/create','/agent/:path*'],
 };
 
 export async function middleware(request: NextRequest) {
@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard', request.url)); // Redirect non-admins away
     }
   }
-  if (!token && (url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/practice') || url.pathname.startsWith('/agent') || url.pathname.startsWith('/revise'))) {
+  if (!token && (url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/practice') || url.pathname.startsWith('/agent'))) {
     return NextResponse.redirect(new URL('/sign-in', request.url));
   }
 

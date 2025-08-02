@@ -27,11 +27,22 @@ export default function RevisePage() {
     useEffect(() => {
         const initializeSession = async () => {
             try {
-                const response = await fetch('/api/revise/get-session-key', { method: 'POST' });
-                if (!response.ok) throw new Error("Could not establish a secure session.");
-                
-                const { sessionKey: key } = await response.json();
-                setSessionKey(key);
+                let deviceId = localStorage.getItem('jeeforces_device_id');
+            if (!deviceId) {
+                deviceId = crypto.randomUUID(); // Generate a unique ID
+                localStorage.setItem('jeeforces_device_id', deviceId);
+            }
+
+            // MODIFIED: Include deviceId in the POST body
+            const response = await fetch('/api/revise/get-session-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ deviceId }), // Send deviceId to server
+            });
+            if (!response.ok) throw new Error("Could not establish a secure session.");
+            
+            const { sessionKey: key } = await response.json();
+            setSessionKey(key);
 
                 // Now that we have the session key, try to decrypt any stored API key
                 const storedBlob = localStorage.getItem('gemini_api_key_blob_jeeforces');
