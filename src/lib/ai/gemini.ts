@@ -180,8 +180,17 @@ export const generateRevisionFeed = async (topic: Topic, history: string[],apiKe
 
 export const validateAndStructureTopic = async (userInput: string,apiKey:string): Promise<Topic> => {
     const ai = new GoogleGenAI({ apiKey });
-    const prompt = `A student wants to revise for competitive exams (JEE for engineering or UPSC for civil services) on the topic: "${userInput}". Your task is to validate and structure this topic. Analyze the input to determine if it's a reasonably specific and valid topic from JEE syllabus (Physics, Chemistry, Mathematics) or UPSC syllabus (History, Geography, Polity, Economics, Science & Technology, Current Affairs, Environment, Art & Culture, etc.). If it's valid and specific (e.g., "Projectile Motion", "Indian Constitution", "Monsoon System"), correct any minor typos and identify the subject and exam type. If it's too broad (e.g., "Physics", "History") or not a real topic from either syllabus, it's invalid. Respond ONLY with a JSON object: For valid topics use {"isValid": true, "topicName": "Corrected Topic Name", "subject": "Subject Name", "examType": "JEE" | "UPSC"}, and for invalid topics use {"isValid": false, "reason": "Brief explanation why it's invalid, suggesting more specific alternatives"}`;
-    
+    const prompt = `A student wants to revise for the JEE (Indian engineering entrance exam) on the topic: "${userInput}".
+
+    Your task is to validate and structure this topic.
+
+    1.  Analyze the input. Is it a reasonably specific and valid topic from the JEE syllabus of Physics, Chemistry, or Mathematics?
+    2.  If it is valid and specific (e.g., "Projectile Motion", "Markovnikov's Rule"), correct any minor typos and identify the subject.
+    3.  If it is too broad (e.g., "Physics", "Algebra") or not a real JEE topic (e.g., "History"), it is invalid.
+
+    Respond ONLY with a JSON object in the following format:
+    - For a valid topic: { "isValid": true, "topicName": "Corrected/Specific Topic Name", "subject": "Physics" | "Chemistry" | "Mathematics" }
+    - For an invalid topic: { "isValid": false, "reason": "Explain briefly why it's invalid, e.g., 'This topic is too broad. Please specify a concept like 'Newton's Laws of Motion'.' or 'This does not seem to be a standard JEE topic.'" }`;
     const responseSchema = {
         type: Type.OBJECT,
         properties: {
