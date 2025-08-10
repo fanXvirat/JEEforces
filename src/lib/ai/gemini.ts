@@ -180,17 +180,27 @@ export const generateRevisionFeed = async (topic: Topic, history: string[],apiKe
 
 export const validateAndStructureTopic = async (userInput: string,apiKey:string): Promise<Topic> => {
     const ai = new GoogleGenAI({ apiKey });
-    const prompt = `A student wants to revise for the JEE (Indian engineering entrance exam) on the topic: "${userInput}".
+    const prompt = `A student wants to revise the topic: "${userInput}" for competitive exam preparation in India.
 
-    Your task is to validate and structure this topic.
+Your task is to validate and structure this topic.
 
-    1.  Analyze the input. Is it a reasonably specific and valid topic from the JEE syllabus of Physics, Chemistry, or Mathematics?
-    2.  If it is valid and specific (e.g., "Projectile Motion", "Markovnikov's Rule"), correct any minor typos and identify the subject.
-    3.  If it is too broad (e.g., "Physics", "Algebra") or not a real JEE topic (e.g., "History"), it is invalid.
+1. Determine if it is a reasonably specific and valid topic from the syllabus of major competitive exams in India:
+   - JEE: Physics, Chemistry, Mathematics (e.g., "Projectile Motion", "Markovnikov's Rule")
+   - UPSC: Polity, History, Geography, Economy, Environment, Science & Tech, Ethics, Current Affairs (e.g., "Fundamental Rights", "Mughal Administration")
+   - SSC/Banking/Railways: General Awareness, Quantitative Aptitude, Reasoning, English, Current Affairs (e.g., "Pipes and Cisterns", "Coding-Decoding", "One-Word Substitution")
+2. If valid and specific, correct any typos and identify the subject (Physics, Chemistry, Mathematics, Polity, History, Geography, Economy, Environment, Science & Tech, Ethics, Current Affairs, Quantitative Aptitude, Reasoning, English, General Awareness).
+3. If too broad (e.g., "Physics", "History", "Maths") or unrelated to competitive exams (e.g., "Hollywood Gossip"), it is invalid.
 
-    Respond ONLY with a JSON object in the following format:
-    - For a valid topic: { "isValid": true, "topicName": "Corrected/Specific Topic Name", "subject": "Physics" | "Chemistry" | "Mathematics" }
-    - For an invalid topic: { "isValid": false, "reason": "Explain briefly why it's invalid, e.g., 'This topic is too broad. Please specify a concept like 'Newton's Laws of Motion'.' or 'This does not seem to be a standard JEE topic.'" }`;
+IMPORTANT RULES:
+- You must respond ONLY with a single JSON object.
+- Do not add any extra text, explanations, or formatting.
+- For a valid topic, respond exactly: 
+  { "isValid": true, "topicName": "<Corrected Topic Name>", "subject": "<Subject>" }
+- For an invalid topic, respond exactly:
+  { "isValid": false, "reason": "<Brief reason>" }
+- Never include lists, multiple objects, or any other keys not defined above.
+- If the topic is ambiguous, treat it as invalid and return the invalid format immediately.`;
+
     const responseSchema = {
         type: Type.OBJECT,
         properties: {
