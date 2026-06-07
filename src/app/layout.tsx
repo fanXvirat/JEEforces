@@ -29,6 +29,16 @@ export const metadata: Metadata = {
     template: '%s | Jeeforces',
   },
   description: 'Conquer the IIT-JEE by practicing problems, competing in contests, and joining a community of top aspirants.',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'Jeeforces',
+    description: 'Conquer the IIT-JEE by practicing problems, competing in contests, and joining a community of top aspirants.',
+    url: 'https://jeeforces.tech',
+    siteName: 'Jeeforces',
+    type: 'website',
+  },
 };
 export default function RootLayout({
   children,
