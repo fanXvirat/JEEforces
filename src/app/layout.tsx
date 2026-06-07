@@ -23,6 +23,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://jeeforces.tech'),
   title: {
     default: 'Jeeforces',
     template: '%s | Jeeforces',
