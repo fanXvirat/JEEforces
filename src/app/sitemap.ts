@@ -2,7 +2,7 @@
 import { MetadataRoute } from 'next';
 
 // Define the base URL for your site
-const baseUrl = 'https://jeeforces.me';
+const baseUrl = 'https://jeeforces.vercel.app';
 
 // Define types for the data we expect from your APIs for clarity
 interface DynamicPost {
