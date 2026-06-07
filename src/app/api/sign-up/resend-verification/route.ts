@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     // ─── Send email ─────────────────────────────────────────────────────────
     const verifyUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify?token=${token}`;
     await resend.emails.send({
-      from:    'JEEForces <verify@jeeforces.me>',
+      from:    'JEEForces <verify@jeeforces.tech>',
       to:      email,
       subject: "Resend: Verify your JEEForces account",
       html: `
